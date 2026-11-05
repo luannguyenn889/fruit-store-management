@@ -2,6 +2,19 @@
 
 Hệ thống **FruitStore Management System** áp dụng mô hình **Database-per-Service** trên nền tảng **PostgreSQL 16**. Mỗi dịch vụ sở hữu một cơ sở dữ liệu độc lập, tài khoản kết nối riêng và quản lý migration riêng bằng **Alembic**.
 
+## Danh sách file mã nguồn SQL Schema (Thực thi trực tiếp)
+
+Tất cả các file script `.sql` đã được tách riêng để bạn có thể mở trong **pgAdmin 4** hoặc **psql** và thực thi trực tiếp:
+
+* **[00_init_all_databases.sql](./00_init_all_databases.sql)**: Lệnh tạo 7 cơ sở dữ liệu độc lập.
+* **[01_auth_schema.sql](./01_auth_schema.sql)**: Bảng `roles`, `users`, `user_roles`, `refresh_tokens`, indexes và seed roles.
+* **[02_catalog_schema.sql](./02_catalog_schema.sql)**: Bảng `categories`, `products`, `product_images`, `price_history`, indexes tìm kiếm.
+* **[03_inventory_schema.sql](./03_inventory_schema.sql)**: Bảng `suppliers`, `purchase_orders`, `purchase_items`, `stock_lots`, `reservations`, `reservation_items`, `stock_movements`, index FEFO.
+* **[04_order_schema.sql](./04_order_schema.sql)**: Bảng `customers`, `customer_addresses`, `orders`, `order_items`, `order_status_history`.
+* **[05_payment_schema.sql](./05_payment_schema.sql)**: Bảng `payments`, `refunds`, `payment_events`.
+* **[06_reporting_schema.sql](./06_reporting_schema.sql)**: Bảng `daily_sales_summary`, `product_sales_summary`, `wastage_summary`, `inventory_snapshots`, `sync_checkpoints`.
+* **[07_chatbot_schema.sql](./07_chatbot_schema.sql)**: Bảng `conversations`, `messages`, `tool_execution_logs`, `chat_feedback`.
+
 ## Danh sách tài liệu CSDL chi tiết theo từng dịch vụ
 
 1. **[01_auth_db.md](./01_auth_db.md) — Auth Service (`fruitstore_auth_db`)**

@@ -1,0 +1,686 @@
+<div class="dashboard-layout">
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <!-- Brand Header -->
+    <div class="sidebar-header">
+      <div class="brand-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h2 class="brand-title">Fresh Orchard</h2>
+        <span class="brand-subtitle">HỆ THỐNG TRÁI CÂY TƯƠI</span>
+      </div>
+    </div>
+
+    <!-- Location Selector -->
+    <div class="branch-selector-card">
+      <div class="branch-label">Điểm bán hiện tại</div>
+      <div class="branch-value">
+        <span class="location-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </span>
+        <span class="branch-name">Quận 1 (Kho Trung Tâm)</span>
+        <span class="chevron-down">▾</span>
+      </div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="sidebar-nav">
+      <!-- Section: TỔNG QUAN -->
+      <div class="nav-section-title">TỔNG QUAN</div>
+      <a href="javascript:void(0)" class="nav-item active">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </span>
+        <span class="nav-label">Tổng quan Dashboard</span>
+      </a>
+
+      <!-- Section: BÁN HÀNG & THU NGÂN -->
+      <div class="nav-section-title">BÁN HÀNG & THU NGÂN</div>
+      <a href="javascript:void(0)" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </span>
+        <span class="nav-label">Bán hàng tại quầy POS</span>
+      </a>
+      <a href="javascript:void(0)" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </span>
+        <span class="nav-label">Quản lý Đơn hàng</span>
+      </a>
+      <a href="javascript:void(0)" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+            <line x1="1" y1="10" x2="23" y2="10"/>
+          </svg>
+        </span>
+        <span class="nav-label">Giao dịch & Thanh toán</span>
+      </a>
+
+      <!-- Section: QUẢN LÝ KHO & SẢN PHẨM -->
+      <div class="nav-section-title">QUẢN LÝ KHO & SẢN PHẨM</div>
+      <a href="javascript:void(0)" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+            <path d="M2 12h20"/>
+          </svg>
+        </span>
+        <span class="nav-label">Danh mục Sản phẩm</span>
+      </a>
+      <a href="javascript:void(0)" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m7.5 4.27 9 5.15"/>
+            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+            <path d="m3.3 7 8.7 5 8.7-5"/>
+            <path d="M12 22V12"/>
+          </svg>
+        </span>
+        <span class="nav-label">Tồn kho & Lô hàng FEFO</span>
+      </a>
+      <a href="javascript:void(0)" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="3" width="15" height="13"/>
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+            <circle cx="5.5" cy="18.5" r="2.5"/>
+            <circle cx="18.5" cy="18.5" r="2.5"/>
+          </svg>
+        </span>
+        <span class="nav-label">Nhập hàng NCC</span>
+      </a>
+
+      <!-- Section: BÁO CÁO & PHÂN TÍCH -->
+      <div class="nav-section-title">BÁO CÁO & PHÂN TÍCH</div>
+      <a href="javascript:void(0)" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </span>
+        <span class="nav-label">Doanh thu & Bán chạy</span>
+      </a>
+      <a href="javascript:void(0)" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3v18h18"/>
+            <path d="m19 9-5 5-4-4-3 3"/>
+          </svg>
+        </span>
+        <span class="nav-label">Hao hụt & Hết hạn</span>
+      </a>
+
+      <!-- Section: HỆ THỐNG -->
+      <div class="nav-section-title">HỆ THỐNG</div>
+      <a href="javascript:void(0)" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </span>
+        <span class="nav-label">Cấu hình & Nhân sự</span>
+      </a>
+    </nav>
+
+    <!-- Sidebar Bottom Status -->
+    <div class="sidebar-status-box">
+      <div class="scale-status-title">
+        <span class="green-live-dot"></span>
+        <span class="status-strong">Cân điện tử: Sẵn sàng</span>
+      </div>
+      <div class="scale-sub">Đồng bộ dữ liệu ổn định 0.00kg</div>
+    </div>
+  </aside>
+
+  <!-- MAIN VIEWPORT -->
+  <div class="main-viewport">
+    <!-- Topbar Header -->
+    <header class="dashboard-topbar">
+      <!-- Search Input -->
+      <div class="search-input-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="m21 21-4.3-4.3"/>
+        </svg>
+        <input
+          type="text"
+          placeholder="Tìm kiếm nhanh SKU, mã đơn hàng, lô trái cây... (Ctrl + K)"
+          class="global-search-input"
+        />
+      </div>
+
+      <!-- Topbar Action Buttons & User Profile -->
+      <div class="topbar-right-actions">
+        <button class="create-pos-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-icon">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          <span>Tạo đơn mới (POS)</span>
+        </button>
+
+        <button class="icon-round-btn notification-btn" title="Thông báo hệ thống">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+          </svg>
+          <span class="badge-dot"></span>
+        </button>
+
+        <!-- Profile Widget -->
+        <div class="user-profile-widget">
+          <div class="user-avatar-circle">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Avatar" />
+          </div>
+          <div class="user-info-text">
+            <div class="user-name">{{ currentUser()?.full_name || 'Nguyễn Thùy Mai' }}</div>
+            <div class="user-role">Quản lý Cửa hàng</div>
+          </div>
+          <button class="logout-icon-btn" (click)="logout()" title="Đăng xuất khỏi hệ thống">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENT BODY CONTAINER -->
+    <main class="dashboard-content">
+      <!-- Welcome Banner Row -->
+      <section class="welcome-action-row">
+        <div class="welcome-left">
+          <h1 class="welcome-title">Xin chào, {{ currentUser()?.full_name || 'Nguyễn Thùy Mai' }} 👋</h1>
+          <div class="welcome-meta">
+            <span class="calendar-icon">📅</span>
+            <span>Hôm nay, 18/06/2025</span>
+            <span class="meta-separator">•</span>
+            <span>Kho Quận 1 • Hoạt động bình thường</span>
+          </div>
+        </div>
+
+        <div class="welcome-right">
+          <!-- Filter Tabs -->
+          <div class="time-filter-tabs">
+            <button
+              class="filter-tab-btn"
+              [class.active]="activeTab() === 'today'"
+              (click)="setTab('today')"
+            >
+              Hôm nay
+            </button>
+            <button
+              class="filter-tab-btn"
+              [class.active]="activeTab() === 'week'"
+              (click)="setTab('week')"
+            >
+              Tuần này
+            </button>
+            <button
+              class="filter-tab-btn"
+              [class.active]="activeTab() === 'month'"
+              (click)="setTab('month')"
+            >
+              Tháng này
+            </button>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="action-buttons-group">
+            <button class="secondary-action-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
+              </svg>
+              <span>Nhập hàng nhanh</span>
+            </button>
+
+            <button class="primary-green-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="8" cy="21" r="1"/>
+                <circle cx="19" cy="21" r="1"/>
+                <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+              </svg>
+              <span>+ Bán hàng (POS)</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 KPI CARDS ROW -->
+      <section class="kpi-cards-grid">
+        <!-- Card 1: Doanh thu -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">DOANH THU HÔM NAY</span>
+            <div class="kpi-icon-pill green-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <path d="M6 12h.01M18 12h.01"/>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-big-value">28.450.000 <span class="currency-unit">đ</span></div>
+          <div class="kpi-trend positive">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="trend-icon">
+              <line x1="7" y1="17" x2="17" y2="7"/>
+              <polyline points="7 7 17 7 17 17"/>
+            </svg>
+            <span>+14.2% so với hôm qua</span>
+          </div>
+        </div>
+
+        <!-- Card 2: Đơn hoàn tất -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">ĐƠN HOÀN TẤT</span>
+            <div class="kpi-icon-pill green-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <polyline points="9 15 11 17 15 13"/>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-big-value">142 <span class="unit-text">đơn</span></div>
+          <div class="kpi-sub-breakdown">
+            <span class="dot-item"><span class="small-dot green"></span>128 tại quầy POS</span>
+            <span class="dot-item"><span class="small-dot blue"></span>14 đơn online</span>
+          </div>
+        </div>
+
+        <!-- Card 3: Sản lượng đã bán -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">SẢN LƯỢNG ĐÃ BÁN</span>
+            <div class="kpi-icon-pill green-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+                <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+                <path d="M7 21h10"/>
+                <path d="M12 3v18"/>
+                <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-big-value">318.5 <span class="unit-text">kg</span></div>
+          <div class="kpi-sub-text green-text">
+            <span>🍃 100% trái cây tươi chuẩn loại 1</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Hạn dùng & FEFO -->
+        <div class="kpi-card warning-accent">
+          <div class="kpi-header">
+            <span class="kpi-title">HẠN DÙNG & FEFO</span>
+            <div class="kpi-icon-pill amber-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-big-value amber-value">3 <span class="unit-text">lô cận hạn</span></div>
+          <div class="kpi-sub-text amber-text">
+            <span>⚠️ Cần xuất bán trước ngày mai</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- MIDDLE ROW: CHART & TOP PRODUCTS -->
+      <section class="middle-content-grid">
+        <!-- Left: Hourly Revenue Chart Card -->
+        <div class="content-card chart-card">
+          <div class="card-header-flex">
+            <div>
+              <h2 class="section-title">Doanh thu theo khung giờ</h2>
+              <p class="section-subtitle">Nhịp độ bán hàng liên tục từ 08:00 đến 20:00</p>
+            </div>
+            <div class="metric-toggle-group">
+              <button
+                class="toggle-btn"
+                [class.active]="chartMetric() === 'revenue'"
+                (click)="setChartMetric('revenue')"
+              >
+                Doanh thu (đ)
+              </button>
+              <button
+                class="toggle-btn"
+                [class.active]="chartMetric() === 'volume'"
+                (click)="setChartMetric('volume')"
+              >
+                Sản lượng (kg)
+              </button>
+            </div>
+          </div>
+
+          <!-- Interactive SVG Line Chart -->
+          <div class="chart-display-container">
+            <!-- Peak Annotation Badge -->
+            <div class="peak-tooltip-badge">
+              <span class="badge-time">17:00 - 18:00 (Đỉnh điểm)</span>
+              <span class="badge-val">7.240.000 đ</span>
+            </div>
+
+            <!-- SVG Visual Curve matching mockup -->
+            <svg viewBox="0 0 700 240" class="curve-chart-svg" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#2F855A" stop-opacity="0.22" />
+                  <stop offset="100%" stop-color="#2F855A" stop-opacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              <!-- Grid Horizontal Lines -->
+              <line x1="40" y1="40" x2="680" y2="40" stroke="#EEF3F0" stroke-dasharray="3 3"/>
+              <line x1="40" y1="100" x2="680" y2="100" stroke="#EEF3F0" stroke-dasharray="3 3"/>
+              <line x1="40" y1="160" x2="680" y2="160" stroke="#EEF3F0" stroke-dasharray="3 3"/>
+              <line x1="40" y1="210" x2="680" y2="210" stroke="#DDE5DF" stroke-width="1"/>
+
+              <!-- Filled Area -->
+              <path
+                d="M 60 210 L 60 185 Q 150 170 230 145 T 380 135 T 510 50 T 640 140 L 640 210 Z"
+                fill="url(#chartGradient)"
+              />
+
+              <!-- The Main Green Line -->
+              <path
+                d="M 60 185 Q 150 170 230 145 T 380 135 T 510 50 T 640 140"
+                fill="none"
+                stroke="#2F855A"
+                stroke-width="3"
+                stroke-linecap="round"
+              />
+
+              <!-- Data Point Dots -->
+              <circle cx="60" cy="185" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
+              <circle cx="160" cy="165" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
+              <circle cx="260" cy="142" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
+              <circle cx="360" cy="138" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
+              <circle cx="460" cy="95" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
+              <circle cx="510" cy="50" r="6" fill="#15803D" stroke="#FFFFFF" stroke-width="3"/>
+              <circle cx="640" cy="140" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
+            </svg>
+
+            <!-- Chart X-Axis Labels -->
+            <div class="chart-x-labels">
+              <span>08:00</span>
+              <span>10:00</span>
+              <span>12:00</span>
+              <span>14:00</span>
+              <span>16:00</span>
+              <span>18:00</span>
+              <span>20:00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Top Selling Products Card -->
+        <div class="content-card top-products-card">
+          <div class="card-header-flex">
+            <div>
+              <h2 class="section-title">Bán chạy hôm nay</h2>
+              <p class="section-subtitle">Top mặt hàng dẫn đầu doanh số</p>
+            </div>
+            <div class="header-icon-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="8" r="6"/>
+                <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Product Ranking List -->
+          <div class="products-rank-list">
+            <!-- Item 1 -->
+            <div class="rank-item">
+              <div class="rank-num">01</div>
+              <div class="rank-info">
+                <div class="item-name">Táo Envy New Zealand</div>
+                <div class="item-meta">68.5 kg đã xuất</div>
+              </div>
+              <div class="rank-financial">
+                <div class="item-revenue">16.782.500 đ</div>
+                <div class="item-unit-price">245.000 đ/kg</div>
+              </div>
+            </div>
+
+            <!-- Item 2 -->
+            <div class="rank-item">
+              <div class="rank-num">02</div>
+              <div class="rank-info">
+                <div class="item-name">Nho Shine Muscat</div>
+                <div class="item-meta">32.0 kg đã xuất</div>
+              </div>
+              <div class="rank-financial">
+                <div class="item-revenue">18.560.000 đ</div>
+                <div class="item-unit-price">580.000 đ/kg</div>
+              </div>
+            </div>
+
+            <!-- Item 3 -->
+            <div class="rank-item">
+              <div class="rank-num">03</div>
+              <div class="rank-info">
+                <div class="item-name">Sầu riêng Ri6</div>
+                <div class="item-meta">84.0 kg đã xuất</div>
+              </div>
+              <div class="rank-financial">
+                <div class="item-revenue">12.180.000 đ</div>
+                <div class="item-unit-price">145.000 đ/kg</div>
+              </div>
+            </div>
+
+            <!-- Item 4 -->
+            <div class="rank-item">
+              <div class="rank-num">04</div>
+              <div class="rank-info">
+                <div class="item-name">Cam sành Hà Giang</div>
+                <div class="item-meta">115.0 kg đã xuất</div>
+              </div>
+              <div class="rank-financial">
+                <div class="item-revenue">4.025.000 đ</div>
+                <div class="item-unit-price">35.000 đ/kg</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="top-products-summary-footer">
+            <span>Tổng tỷ trọng top 4: <b>76.3%</b> doanh số</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- BOTTOM ROW: RECENT ORDERS & QUICK ACTIONS -->
+      <section class="bottom-content-grid">
+        <!-- Recent Orders Table Card -->
+        <div class="content-card orders-card">
+          <div class="card-header-flex">
+            <div>
+              <h2 class="section-title">Đơn hàng gần nhất</h2>
+              <p class="section-subtitle">Cập nhật theo thời gian thực tại quầy thu ngân</p>
+            </div>
+            <a href="javascript:void(0)" class="view-all-link">Xem tất cả ›</a>
+          </div>
+
+          <div class="table-responsive-wrap">
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th>MÃ ĐƠN</th>
+                  <th>THỜI GIAN</th>
+                  <th>KHÁCH HÀNG</th>
+                  <th>TRỌNG LƯỢNG</th>
+                  <th>TỔNG TIỀN</th>
+                  <th>TRẠNG THÁI</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="code-col">#ORD-095</td>
+                  <td class="time-col">18:42:10</td>
+                  <td><b>Trần Khánh Ly</b> <span class="customer-tag">(Khách quen)</span></td>
+                  <td>3.45 kg</td>
+                  <td class="amount-col">628.000 đ</td>
+                  <td>
+                    <span class="status-badge success-badge">
+                      <span class="badge-dot-inner"></span> Hoàn thành
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="code-col">#ORD-094</td>
+                  <td class="time-col">18:31:05</td>
+                  <td><b>Lê Hoàng Nam</b></td>
+                  <td>1.80 kg</td>
+                  <td class="amount-col">435.000 đ</td>
+                  <td>
+                    <span class="status-badge success-badge">
+                      <span class="badge-dot-inner"></span> Hoàn thành
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="code-col">#ORD-093</td>
+                  <td class="time-col">18:15:22</td>
+                  <td>Khách lẻ tại quầy</td>
+                  <td>5.20 kg</td>
+                  <td class="amount-col">1.190.000 đ</td>
+                  <td>
+                    <span class="status-badge success-badge">
+                      <span class="badge-dot-inner"></span> Hoàn thành
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="code-col">#ORD-092</td>
+                  <td class="time-col">17:58:40</td>
+                  <td><b>Đặng Minh Tâm</b> <span class="partner-tag">(GrabMart)</span></td>
+                  <td>2.10 kg</td>
+                  <td class="amount-col">360.000 đ</td>
+                  <td>
+                    <span class="status-badge success-badge">
+                      <span class="badge-dot-inner"></span> Hoàn thành
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="code-col">#ORD-091</td>
+                  <td class="time-col">17:42:19</td>
+                  <td><b>Võ Phương Thảo</b></td>
+                  <td>6.50 kg</td>
+                  <td class="amount-col">1.845.000 đ</td>
+                  <td>
+                    <span class="status-badge success-badge">
+                      <span class="badge-dot-inner"></span> Hoàn thành
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Quick Actions Card (2x2 Grid) -->
+        <div class="content-card quick-actions-card">
+          <div>
+            <h2 class="section-title">Tác vụ nhanh</h2>
+            <p class="section-subtitle">Thao tác quản trị trực tiếp thường dùng</p>
+          </div>
+
+          <div class="quick-tiles-grid">
+            <button class="action-tile">
+              <div class="tile-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="3" width="20" height="14" rx="2"/>
+                  <line x1="8" y1="21" x2="16" y2="21"/>
+                  <line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+              </div>
+              <span class="tile-label">Mở POS thu ngân</span>
+            </button>
+
+            <button class="action-tile">
+              <div class="tile-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                </svg>
+              </div>
+              <span class="tile-label">Kiểm kê nhanh</span>
+            </button>
+
+            <button class="action-tile">
+              <div class="tile-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="16"/>
+                  <line x1="8" y1="12" x2="16" y2="12"/>
+                </svg>
+              </div>
+              <span class="tile-label">Thêm mặt hàng</span>
+            </button>
+
+            <button class="action-tile">
+              <div class="tile-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </div>
+              <span class="tile-label">Xuất báo cáo</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Footer Bar -->
+    <footer class="dashboard-footer-bar">
+      <div class="footer-status-left">
+        <span class="gear-icon">⚙️</span>
+        <span>Hệ thống vận hành ổn định</span>
+        <span class="footer-divider">•</span>
+        <span>Đồng bộ cân điện tử: Sẵn sàng</span>
+      </div>
+      <div class="footer-status-right">
+        © 2024 Fresh Orchard System • Vận hành chuỗi bán lẻ trái cây
+      </div>
+    </footer>
+  </div>
+</div>
+
