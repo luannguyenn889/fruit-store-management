@@ -1,3 +1,12 @@
+/**
+ * Module: features/auth/login/login.component.ts
+ * Nhiệm vụ: Xử lý giao diện và sự kiện đăng nhập hệ thống FruitStore.
+ *           - Hỗ trợ đăng nhập bằng Email/SĐT + mật khẩu qua API Gateway.
+ *           - Hỗ trợ đăng nhập bằng Google OAuth2 (Google Identity Services).
+ *           - Đã loại bỏ hoàn toàn `mockGoogleLoginFallback` để đảm bảo tính trung thực
+ *             và bảo mật (Honest UI & SRS Security Fix).
+ */
+
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,8 +23,9 @@ declare const google: any;
   styleUrls: ['./login.component.css']
 })
 export class LoginComponent implements OnInit {
-  contact = 'admin@fruitstore.com';
-  password = 'admin123';
+  // Tài khoản mẫu Quản lý cửa hàng (khớp với script seed.py của auth-service)
+  contact = 'manager@fruitstore.com';
+  password = 'Manager@123';
   rememberMe = true;
 
   showPassword = false;
@@ -36,24 +46,23 @@ export class LoginComponent implements OnInit {
     this.errorMessage.set('');
 
     if (!this.contact.trim() || !this.password) {
-      this.errorMessage.set('Vui lòng nhập đầy đủ thông tin đăng nhập.');
+      this.errorMessage.set('Vui lòng nhập đầy đủ email/số điện thoại và mật khẩu.');
       return;
     }
 
-    const email = this.contact.includes('@')
-      ? this.contact.trim()
-      : `${this.contact.trim()}@fruitstore.local`;
-
     this.isLoading.set(true);
-    this.authService.login(email, this.password).subscribe({
+    this.authService.login(this.contact.trim(), this.password).subscribe({
       next: () => {
         this.isLoading.set(false);
         this.router.navigate(['/dashboard']);
       },
       error: err => {
         this.isLoading.set(false);
-        const detail = err.error?.detail || 'Email hoặc mật khẩu không chính xác.';
-        this.errorMessage.set(detail);
+        const message =
+          err.error?.message ||
+          err.error?.detail ||
+          'Email/số điện thoại hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.';
+        this.errorMessage.set(message);
       }
     });
   }
@@ -68,6 +77,7 @@ export class LoginComponent implements OnInit {
   }
 
   triggerGoogleSignIn(): void {
+    this.errorMessage.set('');
     if (typeof google !== 'undefined' && google.accounts?.id) {
       google.accounts.id.initialize({
         client_id: this.authService.googleClientId,
@@ -75,15 +85,20 @@ export class LoginComponent implements OnInit {
       });
       google.accounts.id.prompt((notification: any) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          this.mockGoogleLoginFallback();
+          this.errorMessage.set(
+            'Không thể mở hộp thoại Google (trình duyệt đã chặn popup hoặc domain chưa được cấp phép trên Google Cloud Console). Vui lòng đăng nhập bằng Email và mật khẩu.'
+          );
         }
       });
     } else {
-      this.mockGoogleLoginFallback();
+      this.errorMessage.set(
+        'Thư viện Google Identity Services chưa tải xong. Vui lòng kiểm tra kết nối mạng hoặc đăng nhập bằng mật khẩu.'
+      );
     }
   }
 
   private handleGoogleCredential(credential: string): void {
+    this.errorMessage.set('');
     this.isLoading.set(true);
     this.authService.loginWithGoogle(credential).subscribe({
       next: () => {
@@ -92,23 +107,12 @@ export class LoginComponent implements OnInit {
       },
       error: err => {
         this.isLoading.set(false);
-        this.errorMessage.set(err.error?.detail || 'Đăng nhập bằng Google không thành công.');
-      }
-    });
-  }
-
-  private mockGoogleLoginFallback(): void {
-    this.isLoading.set(true);
-    this.authService.login('admin@fruitstore.com', 'admin123').subscribe({
-      next: () => {
-        this.isLoading.set(false);
-        this.router.navigate(['/dashboard']);
-      },
-      error: () => {
-        this.isLoading.set(false);
-        this.errorMessage.set('Đang kết nối tới máy chủ Google...');
+        const message =
+          err.error?.message ||
+          err.error?.detail ||
+          'Xác thực tài khoản Google không thành công. Vui lòng thử lại.';
+        this.errorMessage.set(message);
       }
     });
   }
 }
-

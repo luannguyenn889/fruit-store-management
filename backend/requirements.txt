@@ -1,11 +1,35 @@
+# =============================================================================
+# DANH SÁCH THƯ VIỆN PYTHON DÙNG CHUNG CHO HỆ THỐNG BACKEND SOA (FRUITSTORE)
+# Nhiệm vụ: Cung cấp các gói phụ thuộc cho API Gateway, Auth Service và Catalog Service
+# =============================================================================
+
+# Web Framework & ASGI Server
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
-sqlalchemy>=2.0.36
+
+# ORM Bất đồng bộ (SQLAlchemy 2.0 Async) & Database Drivers + Migration (Alembic)
+sqlalchemy[asyncio]>=2.0.36
+asyncpg>=0.30.0
 psycopg2-binary>=2.9.10
+aiosqlite>=0.20.0
+alembic>=1.14.0
+
+# Xác thực dữ liệu & Quản lý cấu hình môi trường (.env)
 pydantic>=2.9.0
 pydantic-settings>=2.6.0
+email-validator>=2.2.0
 python-multipart>=0.0.12
-pyjwt>=2.9.0
-bcrypt>=4.2.0
 python-dotenv>=1.0.1
 
+# Bảo mật, Mã hóa mật khẩu, JWT & Xác thực Google OAuth2
+pyjwt>=2.9.0
+bcrypt>=4.2.0
+google-auth>=2.36.0
+requests>=2.32.0
+
+# HTTP Client bất đồng bộ (Dùng cho API Gateway proxy & gọi liên service)
+httpx>=0.28.0
+
+# Kiểm thử tự động (Unit Test, API Test & E2E Test)
+pytest>=8.3.0
+pytest-asyncio>=0.24.0

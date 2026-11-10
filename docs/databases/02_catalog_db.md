@@ -8,7 +8,7 @@
   ```env
   DATABASE_URL=postgresql+psycopg://catalog_user:catalog_pass@postgres:5432/fruitstore_catalog_db
   ```
-- **Trách nhiệm dữ liệu:** Quản lý danh mục trái cây, thông tin chi tiết sản phẩm, đơn vị tính (`kg`, `hộp`, `giỏ`), nguồn gốc xuất xứ, điều kiện bảo quản, giá bán hiện hành, lịch sử thay đổi giá và đường dẫn hình ảnh sản phẩm.
+- **Trách nhiệm dữ liệu:** Quản lý danh mục trái cây, thông tin chi tiết sản phẩm, đơn vị tính (`kg`, `hop`, `qua`), nguồn gốc xuất xứ, điều kiện bảo quản, giá bán hiện hành, lịch sử thay đổi giá và đường dẫn hình ảnh sản phẩm.
 - **Chiến lược lưu hình ảnh:** File ảnh vật lý (`.webp`, `.jpg`, `.png`) lưu tại Docker Volume `/storage/products/`. Database chỉ lưu đường dẫn tương đối (ví dụ `/media/products/xoai-cat-hoa-loc.webp`).
 
 ---
@@ -89,7 +89,7 @@ erDiagram
 | `sku` | `VARCHAR(50)` | `NOT NULL, UNIQUE` | — | Mã hàng hóa (VD: `FRT-XOAI-001`, `FRT-TAO-FUJI`) |
 | `name` | `VARCHAR(200)` | `NOT NULL` | — | Tên trái cây (VD: Xoài cát Hòa Lộc) |
 | `slug` | `VARCHAR(220)` | `NOT NULL, UNIQUE` | — | Slug URL (VD: `xoai-cat-hoa-loc`) |
-| `unit` | `VARCHAR(20)` | `NOT NULL, CHECK` | `'kg'` | Đơn vị tính: `'kg'`, `'hop'`, `'trai'`, `'gio'` |
+| `unit` | `VARCHAR(20)` | `NOT NULL, CHECK` | `'kg'` | Đơn vị tính: `'kg'`, `'hop'`, `'qua'` |
 | `price` | `NUMERIC(14, 2)` | `NOT NULL, CHECK (>= 0)` | — | Giá bán hiện hành trên 1 đơn vị tính (VNĐ) |
 | `origin` | `VARCHAR(150)` | `NULL` | `NULL` | Nguồn gốc xuất xứ (VD: Tiền Giang, Nhập khẩu Úc) |
 | `default_shelf_life_days` | `INT` | `NOT NULL, CHECK (> 0)` | `7` | Số ngày bảo quản tiêu chuẩn (gợi ý hạn dùng khi nhập kho) |
@@ -145,7 +145,7 @@ CREATE TABLE products (
     name VARCHAR(200) NOT NULL,
     slug VARCHAR(220) NOT NULL UNIQUE,
     unit VARCHAR(20) NOT NULL DEFAULT 'kg'
-        CHECK (unit IN ('kg', 'hop', 'trai', 'gio')),
+        CHECK (unit IN ('kg', 'hop', 'qua')),
     price NUMERIC(14, 2) NOT NULL CHECK (price >= 0),
     origin VARCHAR(150),
     default_shelf_life_days INT NOT NULL DEFAULT 7 CHECK (default_shelf_life_days > 0),

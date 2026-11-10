@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS products (
     name VARCHAR(200) NOT NULL,
     slug VARCHAR(220) NOT NULL UNIQUE,
     unit VARCHAR(20) NOT NULL DEFAULT 'kg'
-        CHECK (unit IN ('kg', 'hop', 'trai', 'gio')),
+        CHECK (unit IN ('kg', 'hop', 'qua')),
     price NUMERIC(14, 2) NOT NULL CHECK (price >= 0),
     origin VARCHAR(150),
     default_shelf_life_days INT NOT NULL DEFAULT 7 CHECK (default_shelf_life_days > 0),

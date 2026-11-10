@@ -77,7 +77,7 @@ erDiagram
 | Tên cột | Kiểu dữ liệu | Ràng buộc | Mặc định | Mô tả |
 |---|---|---|---|---|
 | `id` | `SMALLSERIAL` | `PRIMARY KEY` | Tự tăng | ID vai trò |
-| `code` | `VARCHAR(50)` | `NOT NULL, UNIQUE` | — | Mã vai trò: `'ADMIN'`, `'MANAGER'`, `'STAFF'`, `'WAREHOUSE_STAFF'`, `'CUSTOMER'` |
+| `code` | `VARCHAR(50)` | `NOT NULL, UNIQUE` | — | Mã vai trò: `'ADMIN'`, `'MANAGER'`, `'STAFF'`, `'WAREHOUSE'`, `'CUSTOMER'` |
 | `name` | `VARCHAR(100)` | `NOT NULL` | — | Tên hiển thị tiếng Việt (VD: Quản trị viên, Nhân viên kho) |
 | `description` | `TEXT` | `NULL` | `NULL` | Mô tả phạm vi quyền hạn |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL` | `NOW()` | Ngày tạo |
@@ -156,7 +156,7 @@ INSERT INTO roles (code, name, description) VALUES
 ('ADMIN', 'Quản trị viên', 'Toàn quyền cấu hình hệ thống và quản lý tài khoản'),
 ('MANAGER', 'Quản lý cửa hàng', 'Quản lý sản phẩm, giá bán, kho, nhà cung cấp và xem báo cáo'),
 ('STAFF', 'Nhân viên bán hàng', 'Bán hàng tại quầy POS, xử lý đơn hàng và thanh toán'),
-('WAREHOUSE_STAFF', 'Nhân viên kho', 'Nhập hàng theo lô, kiểm kê và xử lý trái cây hết hạn/hư hỏng'),
+('WAREHOUSE', 'Nhân viên kho', 'Nhập hàng theo lô, kiểm kê và xử lý trái cây hết hạn/hư hỏng'),
 ('CUSTOMER', 'Khách hàng', 'Xem sản phẩm, đặt hàng trực tuyến và theo dõi đơn hàng');
 ```
 

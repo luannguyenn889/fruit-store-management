@@ -60,7 +60,7 @@ INSERT INTO roles (code, name, description) VALUES
 ('ADMIN', 'Quản trị viên', 'Toàn quyền cấu hình hệ thống và quản trị tài khoản'),
 ('MANAGER', 'Quản lý cửa hàng', 'Quản lý sản phẩm, giá bán, kho, nhà cung cấp và xem báo cáo'),
 ('STAFF', 'Nhân viên bán hàng', 'Bán hàng tại quầy POS, xử lý đơn hàng và thanh toán'),
-('WAREHOUSE_STAFF', 'Nhân viên kho', 'Nhập hàng theo lô, kiểm kê và xử lý trái cây hết hạn/hư hỏng'),
+('WAREHOUSE', 'Nhân viên kho', 'Nhập hàng theo lô, kiểm kê và xử lý trái cây hết hạn/hư hỏng'),
 ('CUSTOMER', 'Khách hàng', 'Xem sản phẩm, đặt hàng trực tuyến và theo dõi đơn hàng')
 ON CONFLICT (code) DO NOTHING;
 

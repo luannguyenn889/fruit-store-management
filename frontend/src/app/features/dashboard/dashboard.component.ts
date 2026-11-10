@@ -1,11 +1,18 @@
+/**
+ * Module: features/dashboard/dashboard.component.ts
+ * Nhiệm vụ: Màn hình Tổng quan Quản trị Cửa hàng (Admin/Manager Dashboard).
+ *           Hiển thị các chỉ số vận hành cửa hàng và điều hướng sang Quản lý Danh mục & Sản phẩm (`/catalog`).
+ */
+
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { AuthService, User } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
@@ -16,21 +23,12 @@ export class DashboardComponent implements OnInit {
 
   currentUser = signal<User | null>(null);
 
-  constructor(private authService: AuthService) {}
+  constructor(public authService: AuthService) {}
 
   ngOnInit(): void {
     const user = this.authService.currentUser();
     if (user) {
       this.currentUser.set(user);
-    } else {
-      // Fallback demo user
-      this.currentUser.set({
-        id: 'demo-id',
-        email: 'admin@fruitstore.com',
-        full_name: 'Nguyễn Thùy Mai',
-        status: 'ACTIVE',
-        roles: ['Quản lý Cửa hàng']
-      });
     }
   }
 
