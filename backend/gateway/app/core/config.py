@@ -29,6 +29,7 @@ class GatewaySettings(BaseSettings):
     # Địa chỉ các downstream services
     AUTH_SERVICE_URL: str = "http://localhost:8001"
     CATALOG_SERVICE_URL: str = "http://localhost:8002"
+    INVENTORY_SERVICE_URL: str = "http://localhost:8003"
 
     # Cấu hình CORS cho Angular Frontend
     CORS_ORIGINS: Union[List[str], str] = [
