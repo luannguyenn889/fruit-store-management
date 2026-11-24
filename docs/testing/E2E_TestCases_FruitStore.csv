@@ -1,0 +1,137 @@
+Project name:,,FruitStore Management System,,,,,,,,
+,,,,,,,,,,
+Mã yêu cầu,Test case ID,Chức năng,Tiêu đề,Tiền điều kiện,Các bước test,Dữ liệu test,Kết quả mong đợi,Kết quả thực tế,Trạng thái,Ghi chú
+FR-A01,TC_FR-A01_01,Đăng ký,Đăng ký tài khoản với thông tin hợp lệ và tự động gán vai trò CUSTOMER,Người dùng chưa có tài khoản và đang ở trang /register,"1. Nhập đầy đủ thông tin hợp lệ vào biểu mẫu.
+2. Giữ tick đồng ý điều khoản và nhấn Đăng ký tài khoản.","Họ và tên: Nguyễn Văn Kiểm Thử
+Email: e2e_reg_<timestamp>@fruitstore.com
+Mật khẩu: Test@123
+Xác nhận mật khẩu: Test@123",Tài khoản được tạo thành công với vai trò cố định CUSTOMER và hệ thống tự đăng nhập chuyển hướng về /dashboard.,,Pending,Ánh xạ spec 01_auth_register.cy.ts
+FR-A01,TC_FR-A01_02,Đăng ký,Đăng ký khi bỏ trống Họ và tên,Người dùng đang ở trang /register,"1. Để trống trường Họ và tên.
+2. Nhập Email, Mật khẩu, Xác nhận mật khẩu hợp lệ.
+3. Nhấn Đăng ký tài khoản.","Họ và tên: (trống)
+Email: test_empty_name@fruitstore.com
+Mật khẩu: Test@123","Hiển thị thông báo: ""Vui lòng nhập họ và tên đầy đủ."" và không tạo tài khoản.",,Pending,
+FR-A01,TC_FR-A01_03,Đăng ký,Đăng ký khi bỏ trống Email hoặc Số điện thoại,Người dùng đang ở trang /register,"1. Để trống trường Số điện thoại hoặc Email.
+2. Nhập các trường còn lại hợp lệ.
+3. Nhấn Đăng ký tài khoản.","Họ và tên: Nguyễn Văn B
+Email/SĐT: (trống)
+Mật khẩu: Test@123","Hiển thị thông báo: ""Vui lòng nhập địa chỉ email hoặc số điện thoại."" và không tạo tài khoản.",,Pending,
+FR-A01,TC_FR-A01_04,Đăng ký,Đăng ký với mật khẩu ngắn hơn 6 ký tự,Người dùng đang ở trang /register,"1. Nhập mật khẩu gồm 5 ký tự.
+2. Nhập các thông tin còn lại hợp lệ.
+3. Nhấn Đăng ký tài khoản.","Mật khẩu: 12345
+Xác nhận mật khẩu: 12345","Hiển thị thông báo: ""Mật khẩu phải có tối thiểu 6 ký tự."" và không tạo tài khoản.",,Pending,
+FR-A01,TC_FR-A01_05,Đăng ký,Đăng ký khi xác nhận mật khẩu không trùng khớp,Người dùng đang ở trang /register,"1. Nhập đầy đủ thông tin hợp lệ.
+2. Nhập Xác nhận mật khẩu khác Mật khẩu.
+3. Nhấn Đăng ký tài khoản.","Mật khẩu: Test@123
+Xác nhận mật khẩu: Test@999","Hiển thị thông báo: ""Mật khẩu xác nhận không khớp. Vui lòng nhập lại."" và không tạo tài khoản.",,Pending,
+FR-A01,TC_FR-A01_06,Đăng ký,Đăng ký khi bỏ chọn đồng ý Điều khoản dịch vụ,Người dùng đang ở trang /register,"1. Nhập đầy đủ thông tin hợp lệ.
+2. Bỏ tick ô đồng ý Điều khoản dịch vụ.
+3. Nhấn Đăng ký tài khoản.",Đồng ý điều khoản: Không chọn,"Hiển thị thông báo: ""Bạn cần đồng ý với Điều khoản dịch vụ và Chính sách bảo mật để tiếp tục.""",,Pending,
+FR-A01,TC_FR-A01_07,Đăng ký,Đăng ký với email đã tồn tại trong hệ thống (409),Hệ thống đã có tài khoản manager@fruitstore.com,"1. Nhập email manager@fruitstore.com cùng các trường hợp lệ.
+2. Nhấn Đăng ký tài khoản.",Email: manager@fruitstore.com (đã tồn tại),"Backend trả 409 EMAIL_ALREADY_EXISTS và UI hiển thị thông báo email đã được đăng ký.",,Pending,
+FR-A01,TC_FR-A01_08,Đăng ký,Kiểm tra chức năng ẩn/hiện mật khẩu ở cả 2 trường Mật khẩu và Xác nhận,Người dùng đang ở trang /register,"1. Nhập mật khẩu vào cả 2 trường.
+2. Nhấn biểu tượng con mắt để hiện rồi nhấn lại để ẩn.",Mật khẩu: Test@123,Thuộc tính type chuyển đổi chính xác giữa password và text cho từng ô nhập.,,Pending,
+FR-A01,TC_FR-A01_09,Đăng ký,Điều hướng đến trang Đăng ký từ trang Đăng nhập,Người dùng đang ở trang /login,"1. Nhấn liên kết ""Đăng ký tài khoản mới"".",,Hệ thống điều hướng sang /register và hiển thị tiêu đề ""Tạo tài khoản mới"".,,Pending,
+FR-A01,TC_FR-A01_10,Đăng ký,Kiểm tra nút Đăng ký bị vô hiệu hóa khi đang gửi yêu cầu,Người dùng đang ở trang /register,"1. Điền đầy đủ thông tin hợp lệ.
+2. Nhấn Đăng ký trong lúc API đang xử lý (giả lập trễ).",,Nút Đăng ký bị disabled và đổi nhãn sang ""Đang xử lý..."" để chống click trùng.,,Pending,Dùng cy.intercept delay
+FR-A01,TC_FR-A01_11,Đăng ký,Đăng ký thất bại khi mất kết nối máy chủ Backend,Người dùng đang ở trang /register và giả lập mất kết nối mạng,"1. Điền đầy đủ thông tin hợp lệ.
+2. Nhấn Đăng ký tài khoản.",,Ứng dụng bắt lỗi an toàn và hiển thị thông báo lỗi mà không bị crash.,,Pending,Dùng cy.intercept forceNetworkError
+FR-A02,TC_FR-A02_01,Đăng nhập & Refresh Token,Đăng nhập thành công với tài khoản Manager và lưu Access + Refresh Token,Tài khoản manager@fruitstore.com đang hoạt động,"1. Nhập email và mật khẩu Manager tại /login.
+2. Nhấn Đăng nhập ngay.","Email: manager@fruitstore.com
+Mật khẩu: Manager@123",Đăng nhập thành công, chuyển về /dashboard và lưu cả access_token lẫn refresh_token trong localStorage.,,Pending,Ánh xạ spec 02_auth_login.cy.ts
+FR-A02,TC_FR-A02_02,Đăng nhập & Refresh Token,Đăng nhập với mật khẩu không chính xác (401),Người dùng đang ở trang /login,"1. Nhập đúng email manager@fruitstore.com.
+2. Nhập mật khẩu sai và nhấn Đăng nhập.","Email: manager@fruitstore.com
+Mật khẩu: WrongPass@999","Hiển thị thông báo: ""Email/số điện thoại hoặc mật khẩu không chính xác."" và giữ nguyên ở /login.",,Pending,
+FR-A02,TC_FR-A02_03,Đăng nhập & Refresh Token,Đăng nhập với tài khoản chưa đăng ký (401),Người dùng đang ở trang /login,"1. Nhập email chưa tồn tại và mật khẩu bất kỳ.
+2. Nhấn Đăng nhập.","Email: khongtontai@fruitstore.com
+Mật khẩu: Manager@123","Hiển thị thông báo: ""Email/số điện thoại hoặc mật khẩu không chính xác."" và không tạo phiên.",,Pending,
+FR-A02,TC_FR-A02_04,Đăng nhập & Refresh Token,Đăng nhập khi bỏ trống thông tin tài khoản hoặc mật khẩu,Người dùng đang ở trang /login,"1. Xóa trống cả ô tài khoản và ô mật khẩu.
+2. Nhấn Đăng nhập.","Email: (trống)
+Mật khẩu: (trống)","Hiển thị thông báo: ""Vui lòng nhập đầy đủ email/số điện thoại và mật khẩu.""",,Pending,
+FR-A02,TC_FR-A02_05,Đăng nhập & Refresh Token,Đăng nhập bằng email có khoảng trắng ở đầu và cuối,Người dùng đang ở trang /login,"1. Nhập email có khoảng trắng đầu/cuối cùng mật khẩu đúng.
+2. Nhấn Đăng nhập.","Email:   manager@fruitstore.com  
+Mật khẩu: Manager@123",Hệ thống tự cắt khoảng trắng, xác thực thành công và chuyển về /dashboard.,,Pending,
+FR-A02,TC_FR-A02_06,Đăng nhập & Refresh Token,Đăng nhập bằng phím Enter tại trường Mật khẩu,Người dùng đang ở trang /login,"1. Nhập email và mật khẩu hợp lệ.
+2. Nhấn phím Enter tại ô Mật khẩu.","Email: manager@fruitstore.com
+Mật khẩu: Manager@123",Hệ thống submit biểu mẫu, đăng nhập thành công và chuyển hướng về /dashboard.,,Pending,
+FR-A02,TC_FR-A02_07,Đăng nhập & Refresh Token,Kiểm tra chức năng ẩn/hiện mật khẩu tại màn hình Đăng nhập,Người dùng đang ở trang /login,"1. Nhấn biểu tượng con mắt tại trường Mật khẩu để hiện.
+2. Nhấn lần nữa để ẩn lại.",,Trường Mật khẩu chuyển đổi chính xác giữa type=password và type=text.,,Pending,
+FR-A02,TC_FR-A02_08,Đăng nhập & Refresh Token,Kiểm tra nút Đăng nhập bị disabled khi đang gửi yêu cầu,Người dùng đang ở trang /login,"1. Nhập thông tin và nhấn Đăng nhập khi API đang phản hồi chậm.",,Nút chuyển nhãn ""Đang xác thực..."" và bị disabled trong suốt thời gian chờ API.,,Pending,Dùng cy.intercept delay
+FR-A02,TC_FR-A02_09,Đăng nhập & Refresh Token,Đăng nhập thất bại khi mất kết nối máy chủ Backend,Người dùng đang ở trang /login và giả lập mất kết nối mạng,"1. Nhập thông tin đăng nhập và nhấn Đăng nhập.",,Hiển thị thông báo lỗi rõ ràng, không làm treo hoặc crash giao diện.,,Pending,Dùng cy.intercept forceNetworkError
+FR-A02,TC_FR-A02_10,Đăng nhập & Refresh Token,Điều hướng về trang Đăng nhập từ trang Đăng ký,Người dùng đang ở trang /register,"1. Nhấn liên kết ""Đăng nhập ngay"".",,Hệ thống điều hướng sang /login và hiển thị tiêu đề ""Đăng nhập hệ thống"".,,Pending,
+FR-A02,TC_FR-A02_11,Đăng nhập & Refresh Token,Tự động gọi /auth/refresh gia hạn Access Token khi gặp 401,Admin đã đăng nhập và giả lập Access Token hết hạn/hỏng trong localStorage,"1. Giữ nguyên refresh_token hợp lệ, sửa access_token thành chuỗi hết hạn.
+2. Truy cập /users.",access_token: expired.invalid.token,AuthInterceptor tự động gọi POST /api/v1/auth/refresh (200), cập nhật token mới và tải danh sách tài khoản thành công.,,Pending,Kiểm chứng FR-A02 Token Rotation
+FR-A03,TC_FR-A03_01,Đăng xuất & Bảo vệ Route,Đăng xuất gọi POST /auth/logout, xóa phiên và điều hướng về /login,Người dùng đã đăng nhập và đang ở /dashboard,"1. Nhấn nút Đăng xuất ở góc trên bên phải.",,Gọi POST /api/v1/auth/logout trả 200, xóa toàn bộ token khỏi localStorage và chuyển về /login.,,Pending,
+FR-A03,TC_FR-A03_02,Đăng xuất & Bảo vệ Route,AuthGuard chặn truy cập thẳng vào /dashboard, /catalog, /users khi chưa đăng nhập,Người dùng chưa đăng nhập (localStorage trống),"1. Lần lượt truy cập trực tiếp /dashboard, /catalog, /users.",,Tất cả các đường dẫn được bảo vệ đều chuyển hướng người dùng về /login.,,Pending,
+FR-A04,TC_FR-A04_01,Hồ sơ cá nhân & Đổi mật khẩu,Cập nhật họ tên và số điện thoại cá nhân thành công và giữ nguyên sau F5,Tài khoản kiểm thử đã đăng nhập và đang ở /users,"1. Chỉnh sửa Họ và tên và Số điện thoại.
+2. Nhấn Lưu thông tin.
+3. Tải lại trang (F5).","Họ và tên: Khách Hàng Đã Cập Nhật
+SĐT: 09xxxxxxxx",Hiển thị thông báo cập nhật thành công; sau khi tải lại trang dữ liệu mới vẫn hiển thị đúng.,,Pending,Ánh xạ spec 03_users_profile.cy.ts
+FR-A04,TC_FR-A04_02,Hồ sơ cá nhân & Đổi mật khẩu,Cập nhật họ tên dưới 2 ký tự hiển thị lỗi validation,Người dùng đang ở tab Hồ sơ cá nhân tại /users,"1. Nhập 1 ký tự vào ô Họ và tên.
+2. Nhấn Lưu thông tin.",Họ và tên: A,"Hiển thị lỗi: ""Họ và tên phải có tối thiểu 2 ký tự."" và không gửi API.",,Pending,
+FR-A04,TC_FR-A04_03,Hồ sơ cá nhân & Đổi mật khẩu,Đổi mật khẩu với mật khẩu hiện tại không đúng (400),Người dùng đang ở tab Hồ sơ cá nhân tại /users,"1. Nhập sai mật khẩu hiện tại, nhập mật khẩu mới hợp lệ.
+2. Nhấn Cập nhật mật khẩu.","Mật khẩu hiện tại: SaiMatKhauCu@1
+Mật khẩu mới: NewProfile@456","Backend trả 400 INVALID_CURRENT_PASSWORD và hiển thị thông báo: ""Mật khẩu hiện tại không chính xác.""",,Pending,
+FR-A04,TC_FR-A04_04,Hồ sơ cá nhân & Đổi mật khẩu,Đổi mật khẩu khi mật khẩu xác nhận không khớp,Người dùng đang ở tab Hồ sơ cá nhân tại /users,"1. Nhập đúng mật khẩu hiện tại.
+2. Nhập Xác nhận mật khẩu khác mật khẩu mới.
+3. Nhấn Cập nhật mật khẩu.","Mật khẩu mới: NewProfile@456
+Xác nhận: KhongKhop@999","Hiển thị lỗi: ""Mật khẩu xác nhận không khớp với mật khẩu mới.""",,Pending,
+FR-A04,TC_FR-A04_05,Hồ sơ cá nhân & Đổi mật khẩu,Đổi mật khẩu thành công và đăng nhập lại bằng mật khẩu mới,Người dùng đang ở tab Hồ sơ cá nhân tại /users,"1. Nhập đúng mật khẩu hiện tại và mật khẩu mới hợp lệ.
+2. Nhấn Cập nhật mật khẩu.
+3. Đăng xuất và đăng nhập lại bằng mật khẩu mới.",Mật khẩu mới: NewProfile@456,Hệ thống thông báo đổi mật khẩu thành công (thu hồi phiên cũ) và đăng nhập lại bằng mật khẩu mới vào /dashboard thành công.,,Pending,
+FR-A05,TC_FR-A05_01,Quản trị Nhân sự & RBAC,Tài khoản MANAGER không truy cập được danh sách nhân sự,Đăng nhập bằng manager@fruitstore.com (không có quyền ADMIN),"1. Truy cập /users.
+2. Chuyển sang tab ""Quản trị Nhân sự & Phân quyền"".",,Hiển thị thông báo phân quyền rõ ràng: ""Chức năng chỉ dành cho Quản trị viên (ADMIN)"".,,Pending,Ánh xạ spec 04_users_admin.cy.ts
+FR-A05,TC_FR-A05_02,Quản trị Nhân sự & RBAC,ADMIN xem danh sách tài khoản, tìm kiếm theo email và lọc theo vai trò,Đăng nhập bằng tài khoản ADMIN,"1. Truy cập /users.
+2. Tìm theo email manager@fruitstore.com.
+3. Đặt lại và lọc theo vai trò STAFF.","Từ khóa: manager@fruitstore.com
+Lọc vai trò: STAFF",Bảng hiển thị đúng tài khoản khớp điều kiện tìm kiếm và bộ lọc vai trò.,,Pending,
+FR-A05,TC_FR-A05_03,Quản trị Nhân sự & RBAC,ADMIN tạo tài khoản nhân sự mới với vai trò WAREHOUSE,Đăng nhập bằng tài khoản ADMIN tại /users,"1. Nhấn ""+ Tạo tài khoản nhân sự"".
+2. Điền thông tin, chọn vai trò WAREHOUSE và nhấn Tạo tài khoản.","Họ tên: Phạm Thủ Kho E2E
+Email: e2e_kho_<ts>@fruitstore.com
+Vai trò: WAREHOUSE",Tạo tài khoản thành công (201) và xuất hiện ngay trong bảng với nhãn ""Nhân viên kho"".,,Pending,
+FR-A05,TC_FR-A05_04,Quản trị Nhân sự & RBAC,ADMIN cập nhật phân quyền cho nhân sự sang STAFF + WAREHOUSE,Đã tạo tài khoản nhân sự ở TC_FR-A05_03,"1. Nhấn nút ""Phân quyền"" tại dòng nhân sự.
+2. Chọn thêm vai trò STAFF và nhấn Lưu phân quyền.",Vai trò mới: STAFF + WAREHOUSE,Cập nhật thành công và hiển thị đồng thời cả 2 nhãn ""Nhân viên bán hàng"" và ""Nhân viên kho"".,,Pending,
+FR-A05,TC_FR-A05_05,Quản trị Nhân sự & RBAC,ADMIN khóa tài khoản có xác nhận và tài khoản bị khóa không thể đăng nhập (403),Đã có tài khoản nhân sự ở TC_FR-A05_03,"1. Nhấn nút ""Khóa"" và xác nhận trên modal.
+2. Đăng xuất và thử đăng nhập bằng tài khoản vừa khóa.",Trạng thái mới: LOCKED,Tài khoản chuyển sang ""Đã khóa"" và khi đăng nhập lại bị chặn 403 báo tài khoản đang ở trạng thái LOCKED.,,Pending,
+FR-A05,TC_FR-A05_06,Quản trị Nhân sự & RBAC,ADMIN mở khóa tài khoản và tài khoản đăng nhập lại được bình thường,Tài khoản đang ở trạng thái LOCKED từ TC_FR-A05_05,"1. ADMIN nhấn ""Mở khóa"" và xác nhận.
+2. Đăng xuất và đăng nhập lại bằng tài khoản vừa mở khóa.",Trạng thái mới: ACTIVE,Tài khoản chuyển lại ""Đang hoạt động"" và đăng nhập vào /dashboard thành công.,,Pending,
+FR-B01,TC_FR-B01_01,Dashboard & Xem sản phẩm,Trang Dashboard hiển thị dữ liệu thật từ Catalog Service và làm mờ mục chưa triển khai,Đăng nhập Manager và truy cập /dashboard,"1. Quan sát 4 thẻ KPI, khối biểu đồ trống và thanh sidebar.",,Hiển thị số lượng sản phẩm/danh mục thật từ Catalog Service, biểu đồ/đơn hàng hiện Empty State trung thực, 7 mục chưa làm bị làm mờ disabled.,,Pending,Ánh xạ spec 05_catalog_products.cy.ts
+FR-B01,TC_FR-B01_02,Dashboard & Xem sản phẩm,Tìm kiếm sản phẩm theo mã SKU và đặt lại bộ lọc trên /catalog,Đăng nhập Manager và đang ở /catalog,"1. Nhập XOAI-HL-01 vào ô tìm kiếm và nhấn Tìm kiếm.
+2. Nhấn Đặt lại.",Từ khóa: XOAI-HL-01,Hiển thị đúng dòng sản phẩm XOAI-HL-01; sau khi nhấn Đặt lại hiển thị lại toàn bộ danh sách.,,Pending,
+FR-B01,TC_FR-B01_03,Dashboard & Xem sản phẩm,Lọc sản phẩm theo trạng thái kinh doanh ACTIVE,Đăng nhập Manager và đang ở /catalog,"1. Chọn ""Đang kinh doanh"" tại bộ lọc Trạng thái kinh doanh.",Trạng thái: ACTIVE,Toàn bộ các dòng hiển thị trong bảng đều mang trạng thái ""Đang kinh doanh"".,,Pending,
+FR-B01,TC_FR-B01_04,Dashboard & Xem sản phẩm,Hiển thị trạng thái lỗi trung thực và nút Thử tải lại khi Catalog Service trả 502,Đăng nhập Manager và giả lập Gateway trả 502 cho /api/v1/catalog/products,"1. Truy cập /catalog khi Catalog Service không phản hồi.",,Hiển thị hộp lỗi ""Chưa tải được dữ liệu sản phẩm"" kèm nút ""Thử tải lại"".,,Pending,Kiểm chứng Honest UI & NFR-R03
+FR-B03,TC_FR-B03_01,Quản lý Danh mục,Manager tạo danh mục mới hợp lệ và xóa danh mục rỗng thành công,Đăng nhập Manager và đang ở /catalog,"1. Nhấn ""+ Thêm danh mục"", nhập tên hợp lệ và lưu.
+2. Nhấn nút xóa (×) trên danh mục rỗng vừa tạo và xác nhận.",Tên danh mục: Danh mục E2E <ts>,Danh mục mới xuất hiện trên thanh phân loại và xóa thành công khi chưa chứa sản phẩm.,,Pending,
+FR-B03,TC_FR-B03_02,Quản lý Danh mục,Tạo danh mục với tên dưới 2 ký tự hiển thị lỗi validation,Đăng nhập Manager và đang ở /catalog,"1. Mở modal Thêm danh mục, nhập 1 ký tự ""X"".
+2. Nhấn Lưu danh mục.",Tên danh mục: X,"Hiển thị thông báo lỗi: ""Tên danh mục phải có tối thiểu 2 ký tự."" và không tạo danh mục.",,Pending,
+FR-B03,TC_FR-B03_03,Quản lý Danh mục,Xóa danh mục đang chứa sản phẩm bị chặn với lỗi 409 CATEGORY_HAS_PRODUCTS,Danh mục ""Trái cây nội địa"" đang chứa sản phẩm,"1. Nhấn nút xóa (×) tại danh mục ""Trái cây nội địa"".
+2. Nhấn Xác nhận thực hiện.",Danh mục: Trái cây nội địa,Backend trả 409 CATEGORY_HAS_PRODUCTS và UI hiển thị thông báo không thể xóa danh mục đang có sản phẩm.,,Pending,
+FR-B04,TC_FR-B04_01,Quản lý Sản phẩm,Manager thêm sản phẩm mới với đơn vị hộp, bảo quản mát 2-8°C và hạn dùng gợi ý,Đăng nhập Manager và đang ở /catalog,"1. Nhấn ""+ Thêm sản phẩm mới"".
+2. Điền SKU, tên, chọn đơn vị hộp, giá 75000, hạn dùng 5 ngày, bảo quản Mát 2-8°C.
+3. Nhấn Tạo sản phẩm.","SKU: E2E-FRT-<ts>
+Đơn vị: hop
+Giá: 75000
+Hạn dùng: 5 ngày
+Bảo quản: COOL_2_8C",Sản phẩm được tạo (201) và hiển thị đúng ""75.000 ₫/hộp"", ""Mát 2–8°C"", ""5 ngày"".,,Pending,Kiểm chứng FR-B04 & FR-B08
+FR-B04,TC_FR-B04_02,Quản lý Sản phẩm,Tạo sản phẩm trùng mã SKU đã tồn tại trả lỗi 409,Sản phẩm ở TC_FR-B04_01 đã tồn tại,"1. Mở modal thêm sản phẩm và nhập lại đúng mã SKU vừa tạo.
+2. Nhấn Tạo sản phẩm.",SKU trùng: E2E-FRT-<ts>,Backend trả 409 SKU_ALREADY_EXISTS và hiển thị thông báo mã SKU đã tồn tại.,,Pending,
+FR-B04,TC_FR-B04_03,Quản lý Sản phẩm,Tạo sản phẩm với đơn giá âm hiển thị lỗi validation,Đăng nhập Manager tại /catalog,"1. Mở modal thêm sản phẩm, nhập giá -5000.
+2. Nhấn Tạo sản phẩm.",Đơn giá: -5000,"Hiển thị thông báo lỗi: ""Đơn giá khởi tạo không hợp lệ"" và không tạo sản phẩm.",,Pending,
+FR-B04,TC_FR-B04_04,Quản lý Sản phẩm,Manager cập nhật thông tin sản phẩm (PATCH) - khóa ô SKU và Đơn giá,Đã có sản phẩm ở TC_FR-B04_01,"1. Nhấn ""Sửa"" tại dòng sản phẩm.
+2. Kiểm tra ô SKU và Đơn giá bị khóa.
+3. Cập nhật Xuất xứ và nhấn Lưu thay đổi.",Xuất xứ mới: Cái Mơn, Bến Tre,Ô SKU và Đơn giá ở trạng thái disabled; xuất xứ mới được lưu và hiển thị chính xác.,,Pending,Đảm bảo BR-07 không đổi giá qua PATCH
+FR-B05,TC_FR-B05_01,Quản lý Sản phẩm,Manager ngừng kinh doanh sản phẩm (INACTIVE) có modal xác nhận,Đã có sản phẩm ở TC_FR-B04_01,"1. Nhấn ""Ngừng bán"" tại dòng sản phẩm.
+2. Xác nhận trên modal.",Trạng thái mới: INACTIVE,Sản phẩm chuyển sang nhãn ""Ngừng kinh doanh"" nhưng vẫn giữ nguyên trong danh sách để bảo toàn lịch sử.,,Pending,
+FR-B05,TC_FR-B05_02,Phân quyền Catalog,Nhân viên STAFF vào /catalog chỉ được xem danh sách và lịch sử giá,Đăng nhập bằng tài khoản staff@fruitstore.com,"1. Truy cập /catalog và quan sát các nút hành động.",Vai trò: STAFF,Ẩn nút ""+ Thêm sản phẩm mới"", ""+ Thêm danh mục"", ""Sửa"", ""Ngừng bán""; chỉ hiển thị nút ""Lịch sử giá"".,,Pending,
+FR-B06,TC_FR-B06_01,Đổi đơn giá & Lịch sử giá,Đổi đơn giá hợp lệ kèm lý do và kiểm tra dòng PriceHistory Giá cũ -> Giá mới,Đăng nhập Manager và có sản phẩm kiểm thử giá 60000 ₫/kg,"1. Nhấn ""Đổi giá & Lịch sử"".
+2. Nhập đơn giá mới 68000 và lý do ""Điều chỉnh giá mùa vụ E2E"".
+3. Nhấn Xác nhận đổi giá & Ghi lịch sử.","Giá cũ: 60000
+Giá mới: 68000
+Lý do: Điều chỉnh giá mùa vụ E2E",Đơn giá cập nhật thành 68.000 ₫/kg ngay lập tức và bảng PriceHistory hiển thị dòng 60.000 ₫/kg -> 68.000 ₫/kg kèm lý do.,,Pending,Ánh xạ spec 06_catalog_price_history.cy.ts
+FR-B06,TC_FR-B06_02,Đổi đơn giá & Lịch sử giá,Đổi đơn giá trùng với đơn giá hiện tại bị chặn,Sản phẩm đang có giá 68000 ₫/kg,"1. Mở modal đổi giá, nhập lại đúng 68000 và lý do.
+2. Nhấn Xác nhận đổi giá & Ghi lịch sử.",Giá mới: 68000,"Hiển thị thông báo lỗi: ""Đơn giá mới trùng với đơn giá hiện tại."" và không ghi thêm dòng PriceHistory.",,Pending,
+FR-B06,TC_FR-B06_03,Đổi đơn giá & Lịch sử giá,Đổi đơn giá khi bỏ trống lý do điều chỉnh bị chặn,Đăng nhập Manager tại modal đổi giá,"1. Nhập giá mới 72000 và để trống ô Lý do điều chỉnh giá.
+2. Nhấn Xác nhận đổi giá & Ghi lịch sử.","Giá mới: 72000
+Lý do: (trống)","Hiển thị lỗi: ""Vui lòng nhập lý do điều chỉnh giá"" và không gửi yêu cầu lên server.",,Pending,
+FR-B06,TC_FR-B06_04,Đổi đơn giá & Lịch sử giá,Đơn giá mới và lịch sử PriceHistory vẫn lưu bền vững sau khi tải lại trang (F5),Đã đổi giá thành công ở TC_FR-B06_01,"1. Tải lại trang /catalog (F5).
+2. Kiểm tra giá trên bảng và mở lại modal Lịch sử giá.",,Giá 68.000 ₫/kg và bản ghi ""Điều chỉnh giá mùa vụ E2E"" vẫn hiển thị đầy đủ từ PostgreSQL.,,Pending,

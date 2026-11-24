@@ -39,6 +39,13 @@ testem.log
 /typings
 __screenshots__/
 
+# Cypress E2E artifacts
+/cypress/screenshots/
+/cypress/videos/
+/cypress/downloads/
+/cypress/results/
+/cypress.env.json
+
 # System files
 .DS_Store
 Thumbs.db
