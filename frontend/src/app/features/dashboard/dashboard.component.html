@@ -1,3 +1,12 @@
+<!-- ==========================================================================
+     MODULE: features/dashboard/dashboard.component.html
+     NHIỆM VỤ: Giao diện Tổng quan Dashboard.
+     TUÂN THỦ: Honest UI (UI_UX_DESIGN_RULES_FruitStore.md):
+               - Chỉ hiển thị số liệu thật từ API (Catalog & Auth).
+               - Các mục/chỉ số thuộc service chưa triển khai (Inventory, Order,
+                 Payment, Reporting) hiển thị trạng thái trung thực hoặc làm mờ.
+     ========================================================================== -->
+
 <div class="dashboard-layout">
   <!-- LEFT SIDEBAR -->
   <aside class="sidebar">
@@ -25,8 +34,7 @@
             <circle cx="12" cy="10" r="3"/>
           </svg>
         </span>
-        <span class="branch-name">Quận 1 (Kho Trung Tâm)</span>
-        <span class="chevron-down">▾</span>
+        <span class="branch-name">Cửa hàng & Kho Trung Tâm</span>
       </div>
     </div>
 
@@ -34,7 +42,7 @@
     <nav class="sidebar-nav">
       <!-- Section: TỔNG QUAN -->
       <div class="nav-section-title">TỔNG QUAN</div>
-      <a href="javascript:void(0)" class="nav-item active">
+      <a routerLink="/dashboard" class="nav-item active">
         <span class="nav-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="7" height="7"/>
@@ -46,9 +54,9 @@
         <span class="nav-label">Tổng quan Dashboard</span>
       </a>
 
-      <!-- Section: BÁN HÀNG & THU NGÂN -->
+      <!-- Section: BÁN HÀNG & THU NGÂN (Chưa triển khai - làm mờ) -->
       <div class="nav-section-title">BÁN HÀNG & THU NGÂN</div>
-      <a href="javascript:void(0)" class="nav-item">
+      <a href="javascript:void(0)" class="nav-item disabled" aria-disabled="true" title="Chức năng đang phát triển">
         <span class="nav-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="2" y="3" width="20" height="14" rx="2"/>
@@ -58,7 +66,7 @@
         </span>
         <span class="nav-label">Bán hàng tại quầy POS</span>
       </a>
-      <a href="javascript:void(0)" class="nav-item">
+      <a href="javascript:void(0)" class="nav-item disabled" aria-disabled="true" title="Chức năng đang phát triển">
         <span class="nav-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -70,7 +78,7 @@
         </span>
         <span class="nav-label">Quản lý Đơn hàng</span>
       </a>
-      <a href="javascript:void(0)" class="nav-item">
+      <a href="javascript:void(0)" class="nav-item disabled" aria-disabled="true" title="Chức năng đang phát triển">
         <span class="nav-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
@@ -92,7 +100,7 @@
         </span>
         <span class="nav-label">Danh mục Sản phẩm</span>
       </a>
-      <a href="javascript:void(0)" class="nav-item">
+      <a href="javascript:void(0)" class="nav-item disabled" aria-disabled="true" title="Chức năng đang phát triển">
         <span class="nav-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="m7.5 4.27 9 5.15"/>
@@ -103,7 +111,7 @@
         </span>
         <span class="nav-label">Tồn kho & Lô hàng FEFO</span>
       </a>
-      <a href="javascript:void(0)" class="nav-item">
+      <a href="javascript:void(0)" class="nav-item disabled" aria-disabled="true" title="Chức năng đang phát triển">
         <span class="nav-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="1" y="3" width="15" height="13"/>
@@ -115,9 +123,9 @@
         <span class="nav-label">Nhập hàng NCC</span>
       </a>
 
-      <!-- Section: BÁO CÁO & PHÂN TÍCH -->
+      <!-- Section: BÁO CÁO & PHÂN TÍCH (Chưa triển khai - làm mờ) -->
       <div class="nav-section-title">BÁO CÁO & PHÂN TÍCH</div>
-      <a href="javascript:void(0)" class="nav-item">
+      <a href="javascript:void(0)" class="nav-item disabled" aria-disabled="true" title="Chức năng đang phát triển">
         <span class="nav-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="20" x2="18" y2="10"/>
@@ -127,7 +135,7 @@
         </span>
         <span class="nav-label">Doanh thu & Bán chạy</span>
       </a>
-      <a href="javascript:void(0)" class="nav-item">
+      <a href="javascript:void(0)" class="nav-item disabled" aria-disabled="true" title="Chức năng đang phát triển">
         <span class="nav-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 3v18h18"/>
@@ -139,7 +147,7 @@
 
       <!-- Section: HỆ THỐNG -->
       <div class="nav-section-title">HỆ THỐNG</div>
-      <a href="javascript:void(0)" class="nav-item">
+      <a routerLink="/users" class="nav-item">
         <span class="nav-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
@@ -154,9 +162,9 @@
     <div class="sidebar-status-box">
       <div class="scale-status-title">
         <span class="green-live-dot"></span>
-        <span class="status-strong">Cân điện tử: Sẵn sàng</span>
+        <span class="status-strong">Gateway (:8000) đang bật</span>
       </div>
-      <div class="scale-sub">Đồng bộ dữ liệu ổn định 0.00kg</div>
+      <div class="scale-sub">Auth (:8001) • Catalog (:8002)</div>
     </div>
   </aside>
 
@@ -164,7 +172,7 @@
   <div class="main-viewport">
     <!-- Topbar Header -->
     <header class="dashboard-topbar">
-      <!-- Search Input -->
+      <!-- Search Input (đi tới Catalog) -->
       <div class="search-input-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
           <circle cx="11" cy="11" r="8"/>
@@ -172,14 +180,19 @@
         </svg>
         <input
           type="text"
-          placeholder="Tìm kiếm nhanh SKU, mã đơn hàng, lô trái cây... (Ctrl + K)"
+          placeholder="Tìm kiếm sản phẩm, mã SKU..."
           class="global-search-input"
+          routerLink="/catalog"
         />
       </div>
 
       <!-- Topbar Action Buttons & User Profile -->
       <div class="topbar-right-actions">
-        <button class="create-pos-btn">
+        <button
+          class="create-pos-btn btn-disabled-muted"
+          disabled
+          title="Chức năng bán hàng POS đang phát triển"
+        >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-icon">
             <circle cx="12" cy="12" r="10"/>
             <line x1="12" y1="8" x2="12" y2="16"/>
@@ -188,22 +201,11 @@
           <span>Tạo đơn mới (POS)</span>
         </button>
 
-        <button class="icon-round-btn notification-btn" title="Thông báo hệ thống">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-          </svg>
-          <span class="badge-dot"></span>
-        </button>
-
         <!-- Profile Widget -->
         <div class="user-profile-widget">
-          <div class="user-avatar-circle">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Avatar" />
-          </div>
           <div class="user-info-text">
-            <div class="user-name">{{ currentUser()?.full_name || 'Nguyễn Thùy Mai' }}</div>
-            <div class="user-role">Quản lý Cửa hàng</div>
+            <div class="user-name">{{ currentUser()?.full_name || 'Người dùng' }}</div>
+            <div class="user-role">{{ authService.getPrimaryRoleLabel() }}</div>
           </div>
           <button class="logout-icon-btn" (click)="logout()" title="Đăng xuất khỏi hệ thống">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -221,131 +223,100 @@
       <!-- Welcome Banner Row -->
       <section class="welcome-action-row">
         <div class="welcome-left">
-          <h1 class="welcome-title">Xin chào, {{ currentUser()?.full_name || 'Nguyễn Thùy Mai' }} 👋</h1>
+          <h1 class="welcome-title">Xin chào, {{ currentUser()?.full_name || 'Người dùng' }}</h1>
           <div class="welcome-meta">
-            <span class="calendar-icon">📅</span>
-            <span>Hôm nay, 18/06/2025</span>
+            <span>Hôm nay, {{ todayLabel }}</span>
             <span class="meta-separator">•</span>
-            <span>Kho Quận 1 • Hoạt động bình thường</span>
+            <span>Dữ liệu thực tế từ hệ thống SOA</span>
           </div>
         </div>
 
         <div class="welcome-right">
-          <!-- Filter Tabs -->
-          <div class="time-filter-tabs">
-            <button
-              class="filter-tab-btn"
-              [class.active]="activeTab() === 'today'"
-              (click)="setTab('today')"
-            >
-              Hôm nay
-            </button>
-            <button
-              class="filter-tab-btn"
-              [class.active]="activeTab() === 'week'"
-              (click)="setTab('week')"
-            >
-              Tuần này
-            </button>
-            <button
-              class="filter-tab-btn"
-              [class.active]="activeTab() === 'month'"
-              (click)="setTab('month')"
-            >
-              Tháng này
-            </button>
-          </div>
-
-          <!-- Quick Action Buttons -->
           <div class="action-buttons-group">
-            <button class="secondary-action-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                <line x1="12" y1="22.08" x2="12" y2="12"/>
-              </svg>
+            <button
+              class="secondary-action-btn btn-disabled-muted"
+              disabled
+              title="Chức năng nhập hàng NCC đang phát triển"
+            >
               <span>Nhập hàng nhanh</span>
             </button>
 
-            <button class="primary-green-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="8" cy="21" r="1"/>
-                <circle cx="19" cy="21" r="1"/>
-                <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
-              </svg>
-              <span>+ Bán hàng (POS)</span>
+            <button class="primary-green-btn" routerLink="/catalog">
+              <span>Quản lý Sản phẩm</span>
             </button>
           </div>
         </div>
       </section>
 
-      <!-- 4 KPI CARDS ROW -->
+      <!-- 4 KPI CARDS ROW (Chỉ hiển thị dữ liệu thật; chưa có service thì hiển thị 'Chưa có dữ liệu') -->
       <section class="kpi-cards-grid">
-        <!-- Card 1: Doanh thu -->
+        <!-- Card 1: Tổng sản phẩm (Dữ liệu thật từ Catalog Service) -->
         <div class="kpi-card">
           <div class="kpi-header">
-            <span class="kpi-title">DOANH THU HÔM NAY</span>
+            <span class="kpi-title">SẢN PHẨM TRONG CATALOG</span>
+            <div class="kpi-icon-pill green-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M2 12h20"/>
+              </svg>
+            </div>
+          </div>
+          @if (isLoadingCatalog()) {
+            <div class="kpi-big-value">—</div>
+            <div class="kpi-sub-text">Đang tải dữ liệu...</div>
+          } @else if (catalogError()) {
+            <div class="kpi-big-value">—</div>
+            <div class="kpi-sub-text">Chưa kết nối Catalog Service</div>
+          } @else {
+            <div class="kpi-big-value">{{ totalProducts() }} <span class="unit-text">mặt hàng</span></div>
+            <div class="kpi-sub-breakdown">
+              <span class="dot-item"><span class="small-dot green"></span>{{ activeProductsCount() }} đang bán</span>
+              <span class="dot-item"><span class="small-dot blue"></span>{{ inactiveProductsCount() }} tạm ngưng</span>
+            </div>
+          }
+        </div>
+
+        <!-- Card 2: Danh mục trái cây (Dữ liệu thật từ Catalog Service) -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">DANH MỤC TRÁI CÂY</span>
+            <div class="kpi-icon-pill green-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+              </svg>
+            </div>
+          </div>
+          @if (isLoadingCatalog() || catalogError()) {
+            <div class="kpi-big-value">—</div>
+            <div class="kpi-sub-text">{{ isLoadingCatalog() ? 'Đang tải...' : 'Chưa kết nối Catalog' }}</div>
+          } @else {
+            <div class="kpi-big-value">{{ categories().length }} <span class="unit-text">danh mục</span></div>
+            <div class="kpi-sub-text green-text">Đồng bộ trực tiếp từ Catalog DB</div>
+          }
+        </div>
+
+        <!-- Card 3: Doanh thu & Đơn hàng (Chờ Order & Reporting Service) -->
+        <div class="kpi-card kpi-muted-card">
+          <div class="kpi-header">
+            <span class="kpi-title">DOANH THU & ĐƠN HÀNG</span>
             <div class="kpi-icon-pill green-pill">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="2" y="6" width="20" height="12" rx="2"/>
                 <circle cx="12" cy="12" r="2"/>
-                <path d="M6 12h.01M18 12h.01"/>
               </svg>
             </div>
           </div>
-          <div class="kpi-big-value">28.450.000 <span class="currency-unit">đ</span></div>
-          <div class="kpi-trend positive">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="trend-icon">
-              <line x1="7" y1="17" x2="17" y2="7"/>
-              <polyline points="7 7 17 7 17 17"/>
-            </svg>
-            <span>+14.2% so với hôm qua</span>
-          </div>
+          <div class="kpi-big-value">—</div>
+          <div class="kpi-sub-text">Chưa có dữ liệu (chờ Order & Reporting Service)</div>
         </div>
 
-        <!-- Card 2: Đơn hoàn tất -->
-        <div class="kpi-card">
+        <!-- Card 4: Hạn dùng & FEFO (Chờ Inventory Service) -->
+        <div class="kpi-card kpi-muted-card">
           <div class="kpi-header">
-            <span class="kpi-title">ĐƠN HOÀN TẤT</span>
-            <div class="kpi-icon-pill green-pill">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <polyline points="9 15 11 17 15 13"/>
-              </svg>
-            </div>
-          </div>
-          <div class="kpi-big-value">142 <span class="unit-text">đơn</span></div>
-          <div class="kpi-sub-breakdown">
-            <span class="dot-item"><span class="small-dot green"></span>128 tại quầy POS</span>
-            <span class="dot-item"><span class="small-dot blue"></span>14 đơn online</span>
-          </div>
-        </div>
-
-        <!-- Card 3: Sản lượng đã bán -->
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-title">SẢN LƯỢNG ĐÃ BÁN</span>
-            <div class="kpi-icon-pill green-pill">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
-                <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
-                <path d="M7 21h10"/>
-                <path d="M12 3v18"/>
-                <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
-              </svg>
-            </div>
-          </div>
-          <div class="kpi-big-value">318.5 <span class="unit-text">kg</span></div>
-          <div class="kpi-sub-text green-text">
-            <span>🍃 100% trái cây tươi chuẩn loại 1</span>
-          </div>
-        </div>
-
-        <!-- Card 4: Hạn dùng & FEFO -->
-        <div class="kpi-card warning-accent">
-          <div class="kpi-header">
-            <span class="kpi-title">HẠN DÙNG & FEFO</span>
+            <span class="kpi-title">HẠN DÙNG & LÔ FEFO</span>
             <div class="kpi-icon-pill amber-pill">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"/>
@@ -353,264 +324,97 @@
               </svg>
             </div>
           </div>
-          <div class="kpi-big-value amber-value">3 <span class="unit-text">lô cận hạn</span></div>
-          <div class="kpi-sub-text amber-text">
-            <span>⚠️ Cần xuất bán trước ngày mai</span>
-          </div>
+          <div class="kpi-big-value">—</div>
+          <div class="kpi-sub-text">Chưa có dữ liệu (chờ Inventory Service)</div>
         </div>
       </section>
 
-      <!-- MIDDLE ROW: CHART & TOP PRODUCTS -->
+      <!-- MIDDLE ROW: BIỂU ĐỒ DOANH THU (EMPTY STATE) & DANH SÁCH SẢN PHẨM THẬT TỪ CATALOG -->
       <section class="middle-content-grid">
         <!-- Left: Hourly Revenue Chart Card -->
         <div class="content-card chart-card">
           <div class="card-header-flex">
             <div>
               <h2 class="section-title">Doanh thu theo khung giờ</h2>
-              <p class="section-subtitle">Nhịp độ bán hàng liên tục từ 08:00 đến 20:00</p>
-            </div>
-            <div class="metric-toggle-group">
-              <button
-                class="toggle-btn"
-                [class.active]="chartMetric() === 'revenue'"
-                (click)="setChartMetric('revenue')"
-              >
-                Doanh thu (đ)
-              </button>
-              <button
-                class="toggle-btn"
-                [class.active]="chartMetric() === 'volume'"
-                (click)="setChartMetric('volume')"
-              >
-                Sản lượng (kg)
-              </button>
+              <p class="section-subtitle">Dữ liệu tổng hợp từ Order Service & Reporting Service</p>
             </div>
           </div>
 
-          <!-- Interactive SVG Line Chart -->
-          <div class="chart-display-container">
-            <!-- Peak Annotation Badge -->
-            <div class="peak-tooltip-badge">
-              <span class="badge-time">17:00 - 18:00 (Đỉnh điểm)</span>
-              <span class="badge-val">7.240.000 đ</span>
-            </div>
-
-            <!-- SVG Visual Curve matching mockup -->
-            <svg viewBox="0 0 700 240" class="curve-chart-svg" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#2F855A" stop-opacity="0.22" />
-                  <stop offset="100%" stop-color="#2F855A" stop-opacity="0.0" />
-                </linearGradient>
-              </defs>
-
-              <!-- Grid Horizontal Lines -->
-              <line x1="40" y1="40" x2="680" y2="40" stroke="#EEF3F0" stroke-dasharray="3 3"/>
-              <line x1="40" y1="100" x2="680" y2="100" stroke="#EEF3F0" stroke-dasharray="3 3"/>
-              <line x1="40" y1="160" x2="680" y2="160" stroke="#EEF3F0" stroke-dasharray="3 3"/>
-              <line x1="40" y1="210" x2="680" y2="210" stroke="#DDE5DF" stroke-width="1"/>
-
-              <!-- Filled Area -->
-              <path
-                d="M 60 210 L 60 185 Q 150 170 230 145 T 380 135 T 510 50 T 640 140 L 640 210 Z"
-                fill="url(#chartGradient)"
-              />
-
-              <!-- The Main Green Line -->
-              <path
-                d="M 60 185 Q 150 170 230 145 T 380 135 T 510 50 T 640 140"
-                fill="none"
-                stroke="#2F855A"
-                stroke-width="3"
-                stroke-linecap="round"
-              />
-
-              <!-- Data Point Dots -->
-              <circle cx="60" cy="185" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
-              <circle cx="160" cy="165" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
-              <circle cx="260" cy="142" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
-              <circle cx="360" cy="138" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
-              <circle cx="460" cy="95" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
-              <circle cx="510" cy="50" r="6" fill="#15803D" stroke="#FFFFFF" stroke-width="3"/>
-              <circle cx="640" cy="140" r="4.5" fill="#FFFFFF" stroke="#2F855A" stroke-width="2.5"/>
-            </svg>
-
-            <!-- Chart X-Axis Labels -->
-            <div class="chart-x-labels">
-              <span>08:00</span>
-              <span>10:00</span>
-              <span>12:00</span>
-              <span>14:00</span>
-              <span>16:00</span>
-              <span>18:00</span>
-              <span>20:00</span>
-            </div>
+          <div class="empty-state-panel">
+            <p class="empty-state-title">Chưa có dữ liệu doanh thu để hiển thị</p>
+            <p class="empty-state-desc">
+              Biểu đồ doanh thu và sản lượng bán ra sẽ tự động cập nhật khi hệ thống kết nối Order Service (:8004) và Reporting Service (:8006).
+            </p>
           </div>
         </div>
 
-        <!-- Right: Top Selling Products Card -->
+        <!-- Right: Sản phẩm hiện có (Dữ liệu thật từ Catalog Service) -->
         <div class="content-card top-products-card">
           <div class="card-header-flex">
             <div>
-              <h2 class="section-title">Bán chạy hôm nay</h2>
-              <p class="section-subtitle">Top mặt hàng dẫn đầu doanh số</p>
+              <h2 class="section-title">Sản phẩm trong Catalog</h2>
+              <p class="section-subtitle">Dữ liệu thực tế từ Catalog Service (:8002)</p>
             </div>
-            <div class="header-icon-pill">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="8" r="6"/>
-                <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
-              </svg>
-            </div>
+            <a routerLink="/catalog" class="view-all-link">Quản lý ›</a>
           </div>
 
-          <!-- Product Ranking List -->
-          <div class="products-rank-list">
-            <!-- Item 1 -->
-            <div class="rank-item">
-              <div class="rank-num">01</div>
-              <div class="rank-info">
-                <div class="item-name">Táo Envy New Zealand</div>
-                <div class="item-meta">68.5 kg đã xuất</div>
-              </div>
-              <div class="rank-financial">
-                <div class="item-revenue">16.782.500 đ</div>
-                <div class="item-unit-price">245.000 đ/kg</div>
-              </div>
+          @if (isLoadingCatalog()) {
+            <div class="empty-state-panel compact">
+              <p class="empty-state-desc">Đang tải danh sách sản phẩm...</p>
             </div>
-
-            <!-- Item 2 -->
-            <div class="rank-item">
-              <div class="rank-num">02</div>
-              <div class="rank-info">
-                <div class="item-name">Nho Shine Muscat</div>
-                <div class="item-meta">32.0 kg đã xuất</div>
-              </div>
-              <div class="rank-financial">
-                <div class="item-revenue">18.560.000 đ</div>
-                <div class="item-unit-price">580.000 đ/kg</div>
-              </div>
+          } @else if (catalogError()) {
+            <div class="empty-state-panel compact">
+              <p class="empty-state-title">Chưa tải được dữ liệu</p>
+              <p class="empty-state-desc">{{ catalogError() }}</p>
+              <button type="button" class="secondary-action-btn" (click)="loadRealCatalogSummary()">
+                Thử lại
+              </button>
             </div>
-
-            <!-- Item 3 -->
-            <div class="rank-item">
-              <div class="rank-num">03</div>
-              <div class="rank-info">
-                <div class="item-name">Sầu riêng Ri6</div>
-                <div class="item-meta">84.0 kg đã xuất</div>
-              </div>
-              <div class="rank-financial">
-                <div class="item-revenue">12.180.000 đ</div>
-                <div class="item-unit-price">145.000 đ/kg</div>
-              </div>
+          } @else if (topCatalogPreview().length === 0) {
+            <div class="empty-state-panel compact">
+              <p class="empty-state-title">Chưa có sản phẩm nào</p>
+              <p class="empty-state-desc">Hãy thêm sản phẩm đầu tiên trong mục Danh mục Sản phẩm.</p>
+              <button type="button" class="primary-green-btn" routerLink="/catalog">
+                + Thêm sản phẩm
+              </button>
             </div>
-
-            <!-- Item 4 -->
-            <div class="rank-item">
-              <div class="rank-num">04</div>
-              <div class="rank-info">
-                <div class="item-name">Cam sành Hà Giang</div>
-                <div class="item-meta">115.0 kg đã xuất</div>
-              </div>
-              <div class="rank-financial">
-                <div class="item-revenue">4.025.000 đ</div>
-                <div class="item-unit-price">35.000 đ/kg</div>
-              </div>
+          } @else {
+            <div class="products-rank-list">
+              @for (prod of topCatalogPreview(); track prod.id) {
+                <div class="rank-item">
+                  <div class="rank-info">
+                    <div class="item-name">{{ prod.name }}</div>
+                    <div class="item-meta">SKU: {{ prod.sku }} • {{ prod.origin || 'Chưa rõ xuất xứ' }}</div>
+                  </div>
+                  <div class="rank-financial">
+                    <div class="item-revenue">{{ formatVnd(prod.price) }}/{{ formatUnitLabel(prod.unit) }}</div>
+                    <div class="item-unit-price">
+                      {{ prod.status === 'ACTIVE' ? 'Đang bán' : 'Tạm ngưng' }}
+                    </div>
+                  </div>
+                </div>
+              }
             </div>
-          </div>
-
-          <div class="top-products-summary-footer">
-            <span>Tổng tỷ trọng top 4: <b>76.3%</b> doanh số</span>
-          </div>
+          }
         </div>
       </section>
 
-      <!-- BOTTOM ROW: RECENT ORDERS & QUICK ACTIONS -->
+      <!-- BOTTOM ROW: ĐƠN HÀNG GẦN NHẤT (EMPTY STATE) & TÁC VỤ NHANH -->
       <section class="bottom-content-grid">
         <!-- Recent Orders Table Card -->
         <div class="content-card orders-card">
           <div class="card-header-flex">
             <div>
               <h2 class="section-title">Đơn hàng gần nhất</h2>
-              <p class="section-subtitle">Cập nhật theo thời gian thực tại quầy thu ngân</p>
+              <p class="section-subtitle">Hiển thị giao dịch phát sinh từ quầy POS và Online</p>
             </div>
-            <a href="javascript:void(0)" class="view-all-link">Xem tất cả ›</a>
           </div>
 
-          <div class="table-responsive-wrap">
-            <table class="dashboard-table">
-              <thead>
-                <tr>
-                  <th>MÃ ĐƠN</th>
-                  <th>THỜI GIAN</th>
-                  <th>KHÁCH HÀNG</th>
-                  <th>TRỌNG LƯỢNG</th>
-                  <th>TỔNG TIỀN</th>
-                  <th>TRẠNG THÁI</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="code-col">#ORD-095</td>
-                  <td class="time-col">18:42:10</td>
-                  <td><b>Trần Khánh Ly</b> <span class="customer-tag">(Khách quen)</span></td>
-                  <td>3.45 kg</td>
-                  <td class="amount-col">628.000 đ</td>
-                  <td>
-                    <span class="status-badge success-badge">
-                      <span class="badge-dot-inner"></span> Hoàn thành
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="code-col">#ORD-094</td>
-                  <td class="time-col">18:31:05</td>
-                  <td><b>Lê Hoàng Nam</b></td>
-                  <td>1.80 kg</td>
-                  <td class="amount-col">435.000 đ</td>
-                  <td>
-                    <span class="status-badge success-badge">
-                      <span class="badge-dot-inner"></span> Hoàn thành
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="code-col">#ORD-093</td>
-                  <td class="time-col">18:15:22</td>
-                  <td>Khách lẻ tại quầy</td>
-                  <td>5.20 kg</td>
-                  <td class="amount-col">1.190.000 đ</td>
-                  <td>
-                    <span class="status-badge success-badge">
-                      <span class="badge-dot-inner"></span> Hoàn thành
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="code-col">#ORD-092</td>
-                  <td class="time-col">17:58:40</td>
-                  <td><b>Đặng Minh Tâm</b> <span class="partner-tag">(GrabMart)</span></td>
-                  <td>2.10 kg</td>
-                  <td class="amount-col">360.000 đ</td>
-                  <td>
-                    <span class="status-badge success-badge">
-                      <span class="badge-dot-inner"></span> Hoàn thành
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="code-col">#ORD-091</td>
-                  <td class="time-col">17:42:19</td>
-                  <td><b>Võ Phương Thảo</b></td>
-                  <td>6.50 kg</td>
-                  <td class="amount-col">1.845.000 đ</td>
-                  <td>
-                    <span class="status-badge success-badge">
-                      <span class="badge-dot-inner"></span> Hoàn thành
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="empty-state-panel">
+            <p class="empty-state-title">Chưa có đơn hàng nào được ghi nhận</p>
+            <p class="empty-state-desc">
+              Danh sách đơn hàng gần nhất sẽ hiển thị tại đây sau khi triển khai Order Service (:8004) và màn hình POS.
+            </p>
           </div>
         </div>
 
@@ -618,11 +422,11 @@
         <div class="content-card quick-actions-card">
           <div>
             <h2 class="section-title">Tác vụ nhanh</h2>
-            <p class="section-subtitle">Thao tác quản trị trực tiếp thường dùng</p>
+            <p class="section-subtitle">Các chức năng đang hoạt động sẽ sáng</p>
           </div>
 
           <div class="quick-tiles-grid">
-            <button class="action-tile">
+            <button class="action-tile disabled" disabled title="Chức năng đang phát triển">
               <div class="tile-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="2" y="3" width="20" height="14" rx="2"/>
@@ -633,7 +437,7 @@
               <span class="tile-label">Mở POS thu ngân</span>
             </button>
 
-            <button class="action-tile">
+            <button class="action-tile disabled" disabled title="Chức năng đang phát triển">
               <div class="tile-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
@@ -654,7 +458,7 @@
               <span class="tile-label">Thêm mặt hàng</span>
             </button>
 
-            <button class="action-tile">
+            <button class="action-tile disabled" disabled title="Chức năng đang phát triển">
               <div class="tile-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -672,15 +476,13 @@
     <!-- Bottom Footer Bar -->
     <footer class="dashboard-footer-bar">
       <div class="footer-status-left">
-        <span class="gear-icon">⚙️</span>
-        <span>Hệ thống vận hành ổn định</span>
+        <span>Fresh Orchard SOA</span>
         <span class="footer-divider">•</span>
-        <span>Đồng bộ cân điện tử: Sẵn sàng</span>
+        <span>Auth (:8001) & Catalog (:8002) sẵn sàng qua Gateway (:8000)</span>
       </div>
       <div class="footer-status-right">
-        © 2024 Fresh Orchard System • Vận hành chuỗi bán lẻ trái cây
+        FruitStore Management System
       </div>
     </footer>
   </div>
 </div>
-

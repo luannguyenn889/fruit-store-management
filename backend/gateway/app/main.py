@@ -42,11 +42,12 @@ app.add_middleware(
     expose_headers=["X-Request-ID"],
 )
 
-# Danh sách các đường dẫn công khai trong Auth Service không yêu cầu JWT
+# Danh sách các đường dẫn công khai trong Auth Service không yêu cầu Access Token JWT
 PUBLIC_AUTH_PATHS = {
     "/api/v1/auth/login",
     "/api/v1/auth/google",
     "/api/v1/auth/register",
+    "/api/v1/auth/refresh",
 }
 
 # Các hop-by-hop headers không được chuyển tiếp qua proxy

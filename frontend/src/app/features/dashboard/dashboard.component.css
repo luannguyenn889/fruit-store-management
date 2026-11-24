@@ -140,6 +140,18 @@
   font-weight: 600;
 }
 
+/* Mục menu chưa triển khai: làm mờ/tối lại và không cho hover xanh */
+.nav-item.disabled {
+  opacity: 0.42;
+  color: #94A3B8;
+  cursor: not-allowed;
+}
+
+.nav-item.disabled:hover {
+  background-color: transparent;
+  color: #94A3B8;
+}
+
 .nav-icon svg {
   width: 16px;
   height: 16px;
@@ -981,4 +993,57 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Trạng thái rỗng trung thực (Honest UI) & các nút chưa triển khai */
+.kpi-muted-card {
+  opacity: 0.72;
+  background-color: #FAFBF9;
+}
+
+.empty-state-panel {
+  border: 1px dashed #DDE5DF;
+  border-radius: 10px;
+  background-color: #FAFBF9;
+  padding: 36px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.empty-state-panel.compact {
+  padding: 24px 16px;
+}
+
+.empty-state-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1F2933;
+}
+
+.empty-state-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #5F6B66;
+  max-width: 48ch;
+  line-height: 1.5;
+}
+
+.btn-disabled-muted,
+.action-tile.disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+.action-tile.disabled:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: #E8F0EA;
+  background-color: #F8FAF9;
+}
+
 

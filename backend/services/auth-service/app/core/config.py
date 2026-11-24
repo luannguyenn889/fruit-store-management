@@ -1,8 +1,8 @@
 """
 Module: app.core.config
 Nhiệm vụ: Quản lý và nạp toàn bộ cấu hình môi trường (.env) cho Auth Service
-          như chuỗi kết nối `fruitstore_auth_db`, khóa ký JWT, thời hạn token (30 phút),
-          khóa nội bộ `INTERNAL_API_KEY` và `GOOGLE_CLIENT_ID`.
+          như chuỗi kết nối `fruitstore_auth_db`, khóa ký JWT, thời hạn Access Token (30 phút),
+          thời hạn Refresh Token (7 ngày), khóa nội bộ `INTERNAL_API_KEY` và `GOOGLE_CLIENT_ID`.
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -22,10 +22,11 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://auth_user:CHANGE_ME_auth@localhost:5432/fruitstore_auth_db"
     )
 
-    # Cấu hình bảo mật JWT (SRS yêu cầu Access Token có thời hạn 15–30 phút)
+    # Cấu hình bảo mật JWT (SRS yêu cầu Access Token 15–30 phút, Refresh Token dài hạn)
     SECRET_KEY: str = "fruitstore_super_secret_jwt_key_2026_safe_and_secure_random"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # Khóa nội bộ dùng để xác thực các request được chuyển tiếp từ API Gateway
     INTERNAL_API_KEY: str = "fruitstore_internal_gateway_key_2026"
@@ -50,4 +51,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

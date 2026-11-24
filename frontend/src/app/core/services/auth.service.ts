@@ -1,14 +1,16 @@
 /**
  * Module: core/services/auth.service.ts
- * Nhiệm vụ: Quản lý trạng thái xác thực người dùng (Authentication & RBAC State) tại Frontend.
- *           Giao tiếp với Auth Service thông qua API Gateway (`http://localhost:8000/api/v1/auth`).
- *           Lưu trữ JWT Access Token, thông tin hồ sơ người dùng và cung cấp các hàm kiểm tra vai trò.
+ * Nhiệm vụ: Quản lý trạng thái xác thực, gia hạn Refresh Token (FR-A02), đăng xuất thu hồi phiên (FR-A03),
+ *           cập nhật hồ sơ/đổi mật khẩu và các API quản trị nhân sự (ADMIN) thông qua API Gateway
+ *           (`http://localhost:8000/api/v1/auth`).
  */
 
 import { Injectable, signal, computed } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { Observable, catchError, of, tap } from 'rxjs';
 import { Router } from '@angular/router';
+
+export type UserStatus = 'ACTIVE' | 'LOCKED' | 'INACTIVE';
 
 export interface RoleInfo {
   id: number;
@@ -22,15 +24,24 @@ export interface User {
   email: string;
   phone?: string | null;
   full_name: string;
-  status: string;
+  status: UserStatus | string;
   roles: (RoleInfo | string)[];
   created_at?: string;
   updated_at?: string;
   last_login_at?: string | null;
 }
 
+export interface PaginatedUsers {
+  items: User[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
 export interface TokenResponse {
   access_token: string;
+  refresh_token?: string | null;
   token_type: string;
   expires_in: number;
   user: User;
@@ -47,6 +58,32 @@ export interface UserRegisterPayload {
   phone?: string;
 }
 
+export interface UpdateProfilePayload {
+  full_name?: string;
+  phone?: string;
+}
+
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}
+
+export interface AdminUserCreatePayload {
+  email: string;
+  phone?: string;
+  full_name: string;
+  password: string;
+  role_codes: string[];
+}
+
+export interface UserFilterParams {
+  page?: number;
+  size?: number;
+  q?: string;
+  role_code?: string;
+  status?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -56,6 +93,7 @@ export class AuthService {
     '569426721711-6ub3hgomi74b201otif6cpe3oq53s5fj.apps.googleusercontent.com';
 
   private readonly tokenKey = 'fruitstore_access_token';
+  private readonly refreshTokenKey = 'fruitstore_refresh_token';
   private readonly userKey = 'fruitstore_user';
 
   // Quản lý trạng thái người dùng phản ứng bằng Angular Signals
@@ -84,21 +122,124 @@ export class AuthService {
       .pipe(tap(response => this.handleAuthSuccess(response)));
   }
 
+  /** Gia hạn Access Token bằng Refresh Token đang lưu trữ (FR-A02) */
+  refreshSession(): Observable<TokenResponse> {
+    const refreshToken = this.getRefreshToken();
+    return this.http
+      .post<TokenResponse>(`${this.apiUrl}/refresh`, {
+        refresh_token: refreshToken
+      })
+      .pipe(tap(response => this.handleAuthSuccess(response)));
+  }
+
   /** Lấy thông tin hồ sơ người dùng hiện tại từ `/api/v1/auth/me` */
   getProfile(): Observable<User> {
     return this.http
       .get<User>(`${this.apiUrl}/me`, { headers: this.getAuthHeaders() })
-      .pipe(
-        tap(user => {
-          this.currentUserSignal.set(user);
-          localStorage.setItem(this.userKey, JSON.stringify(user));
-        })
-      );
+      .pipe(tap(user => this.persistUser(user)));
   }
 
-  /** Đăng xuất khỏi hệ thống và xóa thông tin phiên lưu cục bộ */
+  /** Cập nhật hồ sơ cá nhân (`PATCH /api/v1/auth/me`) */
+  updateProfile(payload: UpdateProfilePayload): Observable<User> {
+    return this.http
+      .patch<User>(`${this.apiUrl}/me`, payload, {
+        headers: this.getAuthHeaders()
+      })
+      .pipe(tap(user => this.persistUser(user)));
+  }
+
+  /** Đổi mật khẩu cá nhân (`POST /api/v1/auth/change-password`) */
+  changePassword(
+    payload: ChangePasswordPayload
+  ): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${this.apiUrl}/change-password`,
+      payload,
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  // ===========================================================================
+  // QUẢN TRỊ NHÂN SỰ & PHÂN QUYỀN (CHỈ ADMIN)
+  // ===========================================================================
+  /** Lấy danh mục vai trò RBAC */
+  getRoles(): Observable<RoleInfo[]> {
+    return this.http.get<RoleInfo[]>(`${this.apiUrl}/roles`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /** Tra cứu, tìm kiếm và lọc danh sách tài khoản người dùng (Chỉ ADMIN) */
+  getUsers(filters: UserFilterParams = {}): Observable<PaginatedUsers> {
+    let params = new HttpParams()
+      .set('page', String(filters.page ?? 1))
+      .set('size', String(filters.size ?? 20));
+    if (filters.q && filters.q.trim()) {
+      params = params.set('q', filters.q.trim());
+    }
+    if (filters.role_code) {
+      params = params.set('role_code', filters.role_code);
+    }
+    if (filters.status) {
+      params = params.set('status', filters.status);
+    }
+    return this.http.get<PaginatedUsers>(`${this.apiUrl}/users`, {
+      headers: this.getAuthHeaders(),
+      params
+    });
+  }
+
+  /** Tạo tài khoản nhân sự nội bộ mới (Chỉ ADMIN) */
+  createUser(payload: AdminUserCreatePayload): Observable<User> {
+    return this.http.post<User>(`${this.apiUrl}/users`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /** Cập nhật danh sách vai trò cho tài khoản (Chỉ ADMIN) */
+  updateUserRoles(userId: string, roleCodes: string[]): Observable<User> {
+    return this.http.patch<User>(
+      `${this.apiUrl}/users/${userId}/roles`,
+      { role_codes: roleCodes },
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  /** Khóa / mở khóa / ngừng hoạt động tài khoản (Chỉ ADMIN) */
+  updateUserStatus(userId: string, status: UserStatus): Observable<User> {
+    return this.http.patch<User>(
+      `${this.apiUrl}/users/${userId}/status`,
+      { status },
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  /**
+   * Đăng xuất khỏi hệ thống: gọi `POST /api/v1/auth/logout` thu hồi Refresh Token ở backend (FR-A03),
+   * sau đó xóa toàn bộ thông tin phiên cục bộ và điều hướng về `/login`.
+   */
   logout(): void {
+    const token = this.getToken();
+    const refreshToken = this.getRefreshToken();
+
+    if (token) {
+      this.http
+        .post(
+          `${this.apiUrl}/logout`,
+          { refresh_token: refreshToken },
+          { headers: this.getAuthHeaders() }
+        )
+        .pipe(catchError(() => of(null)))
+        .subscribe(() => this.clearLocalSession());
+    } else {
+      this.clearLocalSession();
+    }
+  }
+
+  /** Xóa phiên lưu cục bộ mà không gọi lại API (dùng khi refresh token đã hết hạn) */
+  clearLocalSession(): void {
     localStorage.removeItem(this.tokenKey);
+    localStorage.removeItem(this.refreshTokenKey);
     localStorage.removeItem(this.userKey);
     this.currentUserSignal.set(null);
     this.router.navigate(['/login']);
@@ -107,6 +248,11 @@ export class AuthService {
   /** Trả về JWT Access Token hiện tại */
   getToken(): string | null {
     return localStorage.getItem(this.tokenKey);
+  }
+
+  /** Trả về Refresh Token hiện tại */
+  getRefreshToken(): string | null {
+    return localStorage.getItem(this.refreshTokenKey);
   }
 
   /** Tạo HttpHeaders đính kèm Bearer JWT cho các request cần xác thực */
@@ -143,8 +289,15 @@ export class AuthService {
 
   private handleAuthSuccess(response: TokenResponse): void {
     localStorage.setItem(this.tokenKey, response.access_token);
-    localStorage.setItem(this.userKey, JSON.stringify(response.user));
-    this.currentUserSignal.set(response.user);
+    if (response.refresh_token) {
+      localStorage.setItem(this.refreshTokenKey, response.refresh_token);
+    }
+    this.persistUser(response.user);
+  }
+
+  private persistUser(user: User): void {
+    localStorage.setItem(this.userKey, JSON.stringify(user));
+    this.currentUserSignal.set(user);
   }
 
   private getStoredUser(): User | null {

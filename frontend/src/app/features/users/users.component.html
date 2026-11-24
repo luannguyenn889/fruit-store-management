@@ -1,0 +1,660 @@
+<!-- ==========================================================================
+     MODULE: features/users/users.component.html
+     NHIỆM VỤ: Giao diện Cấu hình, Hồ sơ cá nhân & Quản trị Nhân sự (/users).
+     TUÂN THỦ: UI_UX_DESIGN_RULES_FruitStore.md & FRONTEND_DESIGN_RULES.md
+               (White-first, màu thương hiệu xanh lá #246B45, bảng rõ ràng,
+               đầy đủ trạng thái Loading/Empty/Error, xác nhận trước khi khóa).
+     ========================================================================== -->
+
+<div class="users-layout">
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h2 class="brand-title">Fresh Orchard</h2>
+        <span class="brand-subtitle">HỆ THỐNG TRÁI CÂY TƯƠI</span>
+      </div>
+    </div>
+
+    <div class="branch-selector-card">
+      <div class="branch-label">Điểm bán hiện tại</div>
+      <div class="branch-value">
+        <span class="branch-name">Cửa hàng & Kho Trung Tâm</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="Điều hướng quản trị">
+      <div class="nav-section-title">TỔNG QUAN</div>
+      <a routerLink="/dashboard" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </span>
+        <span class="nav-label">Tổng quan Dashboard</span>
+      </a>
+
+      <div class="nav-section-title">QUẢN LÝ KHO & SẢN PHẨM</div>
+      <a routerLink="/catalog" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+            <path d="M2 12h20"/>
+          </svg>
+        </span>
+        <span class="nav-label">Danh mục & Sản phẩm</span>
+      </a>
+
+      <div class="nav-section-title">HỆ THỐNG</div>
+      <a routerLink="/users" class="nav-item active">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </span>
+        <span class="nav-label">Cấu hình & Nhân sự</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-status-box">
+      <div class="scale-status-title">
+        <span class="green-live-dot"></span>
+        <span class="status-strong">Auth Service (:8001)</span>
+      </div>
+      <div class="scale-sub">Refresh Token & RBAC sẵn sàng</div>
+    </div>
+  </aside>
+
+  <!-- MAIN VIEWPORT -->
+  <div class="main-viewport">
+    <header class="users-topbar">
+      <div class="breadcrumb-area">
+        <span class="breadcrumb-muted">Hệ thống</span>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">Cấu hình & Nhân sự</span>
+      </div>
+
+      <div class="user-profile-widget">
+        <div class="user-info-text">
+          <div class="user-name">{{ currentUser()?.full_name || 'Người dùng' }}</div>
+          <div class="user-role">{{ authService.getPrimaryRoleLabel() }}</div>
+        </div>
+        <button
+          type="button"
+          class="logout-icon-btn"
+          (click)="logout()"
+          title="Đăng xuất và thu hồi phiên"
+          aria-label="Đăng xuất khỏi hệ thống"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="users-content">
+      @if (toastMessage()) {
+        <div
+          class="toast-banner"
+          [class.toast-error]="toastType() === 'error'"
+          role="status"
+        >
+          <span>{{ toastMessage() }}</span>
+          <button type="button" class="toast-close" (click)="toastMessage.set('')">✕</button>
+        </div>
+      }
+
+      <!-- PAGE HEADER & TABS -->
+      <section class="page-header-row">
+        <div>
+          <h1 class="page-title">Cấu hình Tài khoản & Quản trị Nhân sự</h1>
+          <p class="page-subtitle">
+            Quản lý tài khoản nhân viên, phân quyền RBAC (Admin, Manager, Staff, Warehouse) và bảo mật mật khẩu cá nhân.
+          </p>
+        </div>
+
+        @if (activeTab() === 'staff' && isAdmin()) {
+          <button type="button" class="primary-btn" (click)="openCreateUserModal()">
+            + Tạo tài khoản nhân sự
+          </button>
+        }
+      </section>
+
+      <div class="tab-bar" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          class="tab-btn"
+          [class.active]="activeTab() === 'staff'"
+          (click)="setTab('staff')"
+        >
+          Quản trị Nhân sự & Phân quyền
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="tab-btn"
+          [class.active]="activeTab() === 'profile'"
+          (click)="setTab('profile')"
+        >
+          Hồ sơ cá nhân & Đổi mật khẩu
+        </button>
+      </div>
+
+      <!-- ====================================================================
+           TAB 1: QUẢN TRỊ NHÂN SỰ & PHÂN QUYỀN (CHỈ ADMIN)
+           ==================================================================== -->
+      @if (activeTab() === 'staff') {
+        @if (!isAdmin()) {
+          <section class="card-panel state-box">
+            <p class="state-title">Chức năng chỉ dành cho Quản trị viên (ADMIN)</p>
+            <p class="state-desc">
+              Tài khoản của bạn hiện có vai trò <b>{{ authService.getPrimaryRoleLabel() }}</b> nên không thể xem hoặc chỉnh sửa danh sách nhân sự. Bạn vẫn có thể cập nhật hồ sơ và đổi mật khẩu ở tab bên cạnh.
+            </p>
+            <button type="button" class="primary-btn" (click)="setTab('profile')">
+              Chuyển sang Hồ sơ cá nhân
+            </button>
+          </section>
+        } @else {
+          <!-- FILTER BAR -->
+          <section class="card-panel">
+            <div class="filter-grid">
+              <div class="form-group">
+                <label for="user-search-input" class="field-label">Tìm kiếm tài khoản</label>
+                <input
+                  id="user-search-input"
+                  type="text"
+                  [(ngModel)]="searchQuery"
+                  (keyup.enter)="loadUsers()"
+                  placeholder="Nhập họ tên, email hoặc số điện thoại..."
+                  class="text-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="user-role-filter" class="field-label">Vai trò</label>
+                <select
+                  id="user-role-filter"
+                  [(ngModel)]="filterRole"
+                  (change)="loadUsers()"
+                  class="select-input"
+                >
+                  <option value="">Tất cả vai trò</option>
+                  <option value="ADMIN">Quản trị viên (ADMIN)</option>
+                  <option value="MANAGER">Quản lý (MANAGER)</option>
+                  <option value="STAFF">Thu ngân POS (STAFF)</option>
+                  <option value="WAREHOUSE">Thủ kho (WAREHOUSE)</option>
+                  <option value="CUSTOMER">Khách hàng (CUSTOMER)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="user-status-filter" class="field-label">Trạng thái</label>
+                <select
+                  id="user-status-filter"
+                  [(ngModel)]="filterStatus"
+                  (change)="loadUsers()"
+                  class="select-input"
+                >
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="ACTIVE">Đang hoạt động</option>
+                  <option value="LOCKED">Đã khóa</option>
+                  <option value="INACTIVE">Ngừng kích hoạt</option>
+                </select>
+              </div>
+
+              <div class="filter-actions">
+                <button type="button" class="primary-btn" (click)="loadUsers()">Tìm kiếm</button>
+                <button type="button" class="ghost-btn" (click)="resetFilters()">Đặt lại</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- USERS TABLE -->
+          <section class="card-panel">
+            <div class="panel-header">
+              <h2 class="section-title">Danh sách tài khoản ({{ totalUsers() }})</h2>
+            </div>
+
+            @if (isLoadingUsers()) {
+              <div class="state-box">
+                <div class="spinner"></div>
+                <p class="state-title">Đang tải danh sách nhân sự...</p>
+              </div>
+            } @else if (usersError()) {
+              <div class="state-box error-box" role="alert">
+                <p class="state-title">Chưa tải được danh sách tài khoản</p>
+                <p class="state-desc">{{ usersError() }}</p>
+                <button type="button" class="primary-btn" (click)="loadUsers()">Thử tải lại</button>
+              </div>
+            } @else if (users().length === 0) {
+              <div class="state-box">
+                <p class="state-title">Không tìm thấy tài khoản phù hợp</p>
+                <p class="state-desc">Hãy thay đổi từ khóa tìm kiếm hoặc tạo tài khoản nhân sự mới.</p>
+                <button type="button" class="secondary-btn" (click)="resetFilters()">Xóa bộ lọc</button>
+              </div>
+            } @else {
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>HỌ VÀ TÊN</th>
+                      <th>EMAIL & ĐIỆN THOẠI</th>
+                      <th>VAI TRÒ (RBAC)</th>
+                      <th>TRẠNG THÁI</th>
+                      <th>ĐĂNG NHẬP GẦN NHẤT</th>
+                      <th class="text-right">THAO TÁC</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (u of users(); track u.id) {
+                      <tr>
+                        <td class="strong-cell">
+                          {{ u.full_name }}
+                          @if (u.id === currentUser()?.id) {
+                            <span class="me-pill">Bạn</span>
+                          }
+                        </td>
+                        <td>
+                          <div>{{ u.email }}</div>
+                          <div class="sub-text">{{ u.phone || 'Chưa cập nhật SĐT' }}</div>
+                        </td>
+                        <td>
+                          <div class="roles-wrap">
+                            @for (r of u.roles; track getRoleCode(r)) {
+                              <span class="role-badge">{{ getRoleLabel(r) }}</span>
+                            }
+                          </div>
+                        </td>
+                        <td>
+                          <span
+                            class="status-badge"
+                            [class.status-active]="u.status === 'ACTIVE'"
+                            [class.status-locked]="u.status === 'LOCKED'"
+                            [class.status-inactive]="u.status === 'INACTIVE'"
+                          >
+                            <span class="status-dot"></span>
+                            {{ getStatusLabel(u.status) }}
+                          </span>
+                        </td>
+                        <td class="sub-text">
+                          {{ u.last_login_at ? (u.last_login_at | date: 'dd/MM/yyyy HH:mm') : 'Chưa đăng nhập' }}
+                        </td>
+                        <td class="text-right actions-cell">
+                          <button
+                            type="button"
+                            class="table-action-btn"
+                            (click)="openRolesModal(u)"
+                          >
+                            Phân quyền
+                          </button>
+
+                          @if (u.id !== currentUser()?.id) {
+                            @if (u.status === 'ACTIVE') {
+                              <button
+                                type="button"
+                                class="table-action-btn danger-action"
+                                (click)="openStatusConfirmModal(u, 'LOCKED')"
+                              >
+                                Khóa
+                              </button>
+                            } @else {
+                              <button
+                                type="button"
+                                class="table-action-btn success-action"
+                                (click)="openStatusConfirmModal(u, 'ACTIVE')"
+                              >
+                                Mở khóa
+                              </button>
+                            }
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </section>
+        }
+      }
+
+      <!-- ====================================================================
+           TAB 2: HỒ SƠ CÁ NHÂN & ĐỔI MẬT KHẨU (MỌI TÀI KHOẢN)
+           ==================================================================== -->
+      @if (activeTab() === 'profile') {
+        <div class="profile-grid">
+          <!-- Card cập nhật hồ sơ -->
+          <section class="card-panel">
+            <h2 class="section-title">Thông tin cá nhân</h2>
+            <p class="section-sub">Cập nhật họ tên hiển thị và số điện thoại liên hệ của bạn.</p>
+
+            <form (ngSubmit)="submitProfileUpdate()" class="stack-form">
+              @if (profileError()) {
+                <div class="form-error-banner" role="alert">{{ profileError() }}</div>
+              }
+
+              <div class="form-group">
+                <label for="profile-email" class="field-label">Email đăng nhập</label>
+                <input
+                  id="profile-email"
+                  type="email"
+                  [value]="currentUser()?.email || ''"
+                  disabled
+                  class="text-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="profile-name" class="field-label">
+                  Họ và tên <span class="required-mark">*</span>
+                </label>
+                <input
+                  id="profile-name"
+                  type="text"
+                  name="profileFullName"
+                  [(ngModel)]="profileFullName"
+                  class="text-input"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="profile-phone" class="field-label">Số điện thoại</label>
+                <input
+                  id="profile-phone"
+                  type="text"
+                  name="profilePhone"
+                  [(ngModel)]="profilePhone"
+                  placeholder="Ví dụ: 0901234567"
+                  class="text-input"
+                />
+              </div>
+
+              <div class="form-actions-end">
+                <button type="submit" class="primary-btn" [disabled]="isSavingProfile()">
+                  {{ isSavingProfile() ? 'Đang lưu...' : 'Lưu thông tin' }}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <!-- Card đổi mật khẩu -->
+          <section class="card-panel">
+            <h2 class="section-title">Đổi mật khẩu</h2>
+            <p class="section-sub">
+              Sau khi đổi mật khẩu thành công, toàn bộ các phiên Refresh Token cũ trên thiết bị khác sẽ tự động bị thu hồi.
+            </p>
+
+            <form (ngSubmit)="submitChangePassword()" class="stack-form">
+              @if (passwordError()) {
+                <div class="form-error-banner" role="alert">{{ passwordError() }}</div>
+              }
+
+              <div class="form-group">
+                <label for="curr-pwd" class="field-label">
+                  Mật khẩu hiện tại <span class="required-mark">*</span>
+                </label>
+                <input
+                  id="curr-pwd"
+                  [type]="showPasswords ? 'text' : 'password'"
+                  name="currentPassword"
+                  [(ngModel)]="currentPassword"
+                  class="text-input"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="new-pwd" class="field-label">
+                  Mật khẩu mới <span class="required-mark">*</span>
+                </label>
+                <input
+                  id="new-pwd"
+                  [type]="showPasswords ? 'text' : 'password'"
+                  name="newPasswordInput"
+                  [(ngModel)]="newPasswordInput"
+                  placeholder="Tối thiểu 6 ký tự"
+                  class="text-input"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="confirm-pwd" class="field-label">
+                  Xác nhận mật khẩu mới <span class="required-mark">*</span>
+                </label>
+                <input
+                  id="confirm-pwd"
+                  [type]="showPasswords ? 'text' : 'password'"
+                  name="confirmPasswordInput"
+                  [(ngModel)]="confirmPasswordInput"
+                  class="text-input"
+                  required
+                />
+              </div>
+
+              <label class="checkbox-row">
+                <input type="checkbox" name="showPasswords" [(ngModel)]="showPasswords" />
+                <span>Hiển thị mật khẩu</span>
+              </label>
+
+              <div class="form-actions-end">
+                <button type="submit" class="primary-btn" [disabled]="isSavingPassword()">
+                  {{ isSavingPassword() ? 'Đang cập nhật...' : 'Cập nhật mật khẩu' }}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      }
+    </main>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     MODAL 1: TẠO TÀI KHOẢN NHÂN SỰ MỚI (ADMIN)
+     ========================================================================== -->
+@if (showCreateModal()) {
+  <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 id="create-user-title" class="modal-title">Tạo tài khoản nhân sự mới</h3>
+        <button type="button" class="modal-close" (click)="closeCreateUserModal()">✕</button>
+      </div>
+
+      <form (ngSubmit)="submitCreateUser()" class="modal-body">
+        @if (createError()) {
+          <div class="form-error-banner" role="alert">{{ createError() }}</div>
+        }
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="new-user-name" class="field-label">
+              Họ và tên <span class="required-mark">*</span>
+            </label>
+            <input
+              id="new-user-name"
+              type="text"
+              name="newFullName"
+              [(ngModel)]="newFullName"
+              placeholder="Ví dụ: Lê Minh Khôi"
+              class="text-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="new-user-phone" class="field-label">Số điện thoại</label>
+            <input
+              id="new-user-phone"
+              type="text"
+              name="newPhone"
+              [(ngModel)]="newPhone"
+              placeholder="0901234567"
+              class="text-input"
+            />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="new-user-email" class="field-label">
+              Email đăng nhập <span class="required-mark">*</span>
+            </label>
+            <input
+              id="new-user-email"
+              type="email"
+              name="newEmail"
+              [(ngModel)]="newEmail"
+              placeholder="nhanvien@fruitstore.com"
+              class="text-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="new-user-pwd" class="field-label">
+              Mật khẩu khởi tạo <span class="required-mark">*</span>
+            </label>
+            <input
+              id="new-user-pwd"
+              type="password"
+              name="newPassword"
+              [(ngModel)]="newPassword"
+              placeholder="Tối thiểu 6 ký tự"
+              class="text-input"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <span class="field-label">Chọn vai trò (RBAC) <span class="required-mark">*</span></span>
+          <div class="role-checkbox-grid">
+            @for (code of ['ADMIN', 'MANAGER', 'STAFF', 'WAREHOUSE', 'CUSTOMER']; track code) {
+              <label class="role-checkbox-item">
+                <input
+                  type="checkbox"
+                  [checked]="selectedCreateRoles.has(code)"
+                  (change)="toggleCreateRole(code)"
+                />
+                <span>{{ code }}</span>
+              </label>
+            }
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="ghost-btn" (click)="closeCreateUserModal()">Hủy</button>
+          <button type="submit" class="primary-btn" [disabled]="isCreatingUser()">
+            {{ isCreatingUser() ? 'Đang tạo...' : 'Tạo tài khoản' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ==========================================================================
+     MODAL 2: PHÂN QUYỀN / CẬP NHẬT VAI TRÒ (ADMIN)
+     ========================================================================== -->
+@if (showRolesModal() && targetUserForRoles(); as target) {
+  <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="roles-modal-title">
+    <div class="modal-panel small-modal">
+      <div class="modal-header">
+        <h3 id="roles-modal-title" class="modal-title">Phân quyền — {{ target.full_name }}</h3>
+        <button type="button" class="modal-close" (click)="closeRolesModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        @if (rolesModalError()) {
+          <div class="form-error-banner" role="alert">{{ rolesModalError() }}</div>
+        }
+
+        <p class="sub-text">Email: <b>{{ target.email }}</b></p>
+
+        <div class="role-checkbox-grid">
+          @for (code of ['ADMIN', 'MANAGER', 'STAFF', 'WAREHOUSE', 'CUSTOMER']; track code) {
+            <label class="role-checkbox-item">
+              <input
+                type="checkbox"
+                [checked]="selectedEditRoles.has(code)"
+                (change)="toggleEditRole(code)"
+              />
+              <span>{{ code }}</span>
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="ghost-btn" (click)="closeRolesModal()">Hủy</button>
+        <button
+          type="button"
+          class="primary-btn"
+          [disabled]="isSavingRoles()"
+          (click)="submitUpdateRoles()"
+        >
+          {{ isSavingRoles() ? 'Đang lưu...' : 'Lưu phân quyền' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ==========================================================================
+     MODAL 3: XÁC NHẬN KHÓA / MỞ KHÓA TÀI KHOẢN (ADMIN)
+     ========================================================================== -->
+@if (showStatusModal() && targetUserForStatus(); as target) {
+  <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="status-modal-title">
+    <div class="modal-panel small-modal">
+      <div class="modal-header">
+        <h3 id="status-modal-title" class="modal-title">
+          {{ targetNewStatus() === 'LOCKED' ? 'Xác nhận khóa tài khoản' : 'Xác nhận mở khóa tài khoản' }}
+        </h3>
+        <button type="button" class="modal-close" (click)="closeStatusModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        @if (targetNewStatus() === 'LOCKED') {
+          <p class="confirm-text">
+            Tài khoản <b>{{ target.full_name }}</b> ({{ target.email }}) sẽ bị khóa ngay lập tức và toàn bộ phiên đăng nhập đang hoạt động sẽ bị thu hồi. Người dùng này sẽ không thể đăng nhập cho đến khi được mở khóa lại.
+          </p>
+        } @else {
+          <p class="confirm-text">
+            Tài khoản <b>{{ target.full_name }}</b> ({{ target.email }}) sẽ được chuyển lại sang trạng thái <b>Đang hoạt động</b> và có thể đăng nhập vào hệ thống bình thường.
+          </p>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="ghost-btn" (click)="closeStatusModal()">Hủy bỏ</button>
+        <button
+          type="button"
+          [class]="targetNewStatus() === 'LOCKED' ? 'danger-btn' : 'primary-btn'"
+          [disabled]="isSavingStatus()"
+          (click)="confirmStatusChange()"
+        >
+          {{ isSavingStatus() ? 'Đang xử lý...' : 'Xác nhận' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

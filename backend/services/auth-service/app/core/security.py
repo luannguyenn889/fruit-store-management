@@ -3,8 +3,11 @@ Module: app.core.security
 Nhiệm vụ: Cung cấp các hàm tiện ích bảo mật cho Auth Service:
           - Băm (hash) và kiểm tra mật khẩu người dùng bằng thuật toán Bcrypt.
           - Tạo và giải mã JWT Access Token (mang thông tin `sub`, `role`, `roles`, `exp`).
+          - Sinh Refresh Token ngẫu nhiên an toàn và băm SHA-256 trước khi lưu DB (`refresh_tokens`).
 """
 
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Union
 import bcrypt
@@ -25,6 +28,16 @@ def get_password_hash(password: str) -> str:
     salt = bcrypt.gensalt(rounds=12)
     hashed = bcrypt.hashpw(password_bytes, salt)
     return hashed.decode("utf-8")
+
+
+def generate_refresh_token() -> str:
+    """Sinh chuỗi Refresh Token ngẫu nhiên có độ entropy cao (FR-A02)."""
+    return secrets.token_urlsafe(48)
+
+
+def hash_token(raw_token: str) -> str:
+    """Băm SHA-256 cho Refresh Token trước khi lưu trữ hoặc tra cứu trong bảng `refresh_tokens`."""
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
 
 def create_access_token(
@@ -70,4 +83,3 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
         return payload
     except jwt.PyJWTError:
         return None
-

@@ -1,12 +1,13 @@
 """
 Module: app.core.deps
 Nhiệm vụ: Cung cấp các FastAPI Dependencies dùng cho Auth Service:
-          - Kiểm tra header `X-Internal-Key` để đảm bảo request đi qua API Gateway.
-          - Trích xuất người dùng hiện tại từ header `X-User-Id` (do Gateway gắn)
-            hoặc từ `Authorization: Bearer <token>` để phục vụ endpoint `/auth/me`.
+          - `verify_internal_key`: Kiểm tra header `X-Internal-Key` để đảm bảo request đi qua API Gateway.
+          - `get_current_user`: Trích xuất người dùng hiện tại từ header `X-User-Id` (do Gateway gắn)
+            hoặc từ `Authorization: Bearer <token>`.
+          - `require_roles`: Kiểm tra phân quyền RBAC tại backend (`NFR-S03`) cho các API quản trị nhân sự.
 """
 
-from typing import Optional
+from typing import Callable, Optional
 from uuid import UUID
 from fastapi import Depends, Header
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -43,7 +44,7 @@ async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
 ) -> User:
     """
-    Lấy thông tin người dùng đang đăng nhập cho endpoint `/auth/me`.
+    Lấy thông tin người dùng đang đăng nhập.
     Ưu tiên đọc `X-User-Id` đã được API Gateway xác thực; hỗ trợ fallback đọc từ Bearer JWT.
     """
     resolved_user_id: Optional[UUID] = None
@@ -98,3 +99,26 @@ async def get_current_user(
 
     return user
 
+
+def require_roles(*allowed_roles: str) -> Callable[..., User]:
+    """
+    Dependency factory kiểm tra phân quyền RBAC trên dữ liệu vai trò thật trong DB (NFR-S03).
+    Chỉ cho phép người dùng sở hữu ít nhất một vai trò trong `allowed_roles`.
+    """
+    normalized_allowed = {r.upper() for r in allowed_roles}
+
+    async def dependency(current_user: User = Depends(get_current_user)) -> User:
+        user_role_codes = {r.code.upper() for r in current_user.roles}
+        if not user_role_codes.intersection(normalized_allowed):
+            raise AppError(
+                status_code=403,
+                code="FORBIDDEN",
+                message="Bạn không có quyền thực hiện chức năng quản trị này.",
+                details={
+                    "required_roles": sorted(normalized_allowed),
+                    "current_roles": sorted(user_role_codes),
+                },
+            )
+        return current_user
+
+    return dependency

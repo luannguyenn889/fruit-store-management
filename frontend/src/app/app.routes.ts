@@ -4,6 +4,7 @@
  *           - `/login`, `/register`: Màn hình xác thực.
  *           - `/dashboard`: Màn hình tổng quan quản trị cửa hàng.
  *           - `/catalog`: Màn hình quản lý Danh mục, Sản phẩm & Lịch sử Đơn giá (Catalog Service).
+ *           - `/users`: Màn hình Cấu hình, Hồ sơ cá nhân & Quản trị Nhân sự (Auth Service).
  */
 
 import { Routes } from '@angular/router';
@@ -11,6 +12,7 @@ import { LoginComponent } from './features/auth/login/login.component';
 import { RegisterComponent } from './features/auth/register/register.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { CatalogComponent } from './features/catalog/catalog.component';
+import { UsersComponent } from './features/users/users.component';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
@@ -19,5 +21,6 @@ export const routes: Routes = [
   { path: 'register', component: RegisterComponent },
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
   { path: 'catalog', component: CatalogComponent, canActivate: [authGuard] },
+  { path: 'users', component: UsersComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: 'dashboard' },
 ];
