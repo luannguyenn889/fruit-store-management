@@ -46,11 +46,11 @@ async def request_id_middleware(request: Request, call_next) -> Response:
     return response
 
 
-# [Pha 2 - TV1 ghép sau khi TV2 & TV3 hoàn thành PR]:
-# from app.api.v1.procurement import router as procurement_router
-# from app.api.v1.lots import router as lots_router
-# app.include_router(procurement_router, prefix=settings.API_V1_STR)
-# app.include_router(lots_router, prefix=settings.API_V1_STR)
+try:
+    from app.api.v1.lots import router as lots_router
+    app.include_router(lots_router, prefix=settings.API_V1_STR)
+except ImportError:
+    pass
 
 
 async def _check_db_health(session: AsyncSession) -> dict:
