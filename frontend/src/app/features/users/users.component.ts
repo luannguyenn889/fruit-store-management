@@ -1,28 +1,34 @@
 /**
  * Module: features/users/users.component.ts
  * Nhiệm vụ: Màn hình Cấu hình, Hồ sơ cá nhân & Quản trị Nhân sự (/users).
- *           Tuân thủ `FRONTEND_DESIGN_RULES.md` và `UI_UX_DESIGN_RULES_FruitStore.md`:
- *           - Tab Quản trị Nhân sự & Phân quyền (ADMIN): tìm kiếm/lọc tài khoản, tạo tài khoản nhân viên
- *             (`MANAGER`, `STAFF`, `WAREHOUSE`, `ADMIN`), cập nhật vai trò và khóa/mở khóa tài khoản có xác nhận.
- *           - Tab Hồ sơ cá nhân & Đổi mật khẩu (mọi tài khoản): cập nhật họ tên/SĐT (`PATCH /auth/me`)
- *             và đổi mật khẩu (`POST /auth/change-password`).
+ *           Bọc trong `AdminLayoutComponent`, dùng `ToastService`, `SkeletonLoaderComponent`
+ *           và `PaginationComponent` tuân thủ đầy đủ quy chuẩn UI/UX.
  */
 
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import {
   AuthService,
   RoleInfo,
   User,
   UserStatus
 } from '../../core/services/auth.service';
+import { ToastService } from '../../core/services/toast.service';
+import { AdminLayoutComponent } from '../../core/layout/admin-layout/admin-layout.component';
+import { SkeletonLoaderComponent } from '../../shared/components/skeleton-loader/skeleton-loader.component';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    FormsModule,
+    AdminLayoutComponent,
+    SkeletonLoaderComponent,
+    PaginationComponent
+  ],
   templateUrl: './users.component.html',
   styleUrls: ['./users.component.css']
 })
@@ -33,16 +39,15 @@ export class UsersComponent implements OnInit {
   // Tab đang hiển thị: 'staff' (Quản trị nhân sự) hoặc 'profile' (Hồ sơ & Đổi mật khẩu)
   activeTab = signal<'staff' | 'profile'>('staff');
 
-  // Thông báo phản hồi sau khi server xác nhận
-  toastMessage = signal('');
-  toastType = signal<'success' | 'error'>('success');
-
   // ===========================================================================
-  // DỮ LIỆU QUẢN TRỊ NHÂN SỰ (CHỈ ADMIN)
+  // DỮ LIỆU QUẢN TRỊ NHÂN SỰ & PHÂN TRANG (CHỈ ADMIN)
   // ===========================================================================
   roles = signal<RoleInfo[]>([]);
   users = signal<User[]>([]);
   totalUsers = signal(0);
+  currentPage = signal(1);
+  pageSize = signal(20);
+  totalPages = signal(1);
   isLoadingUsers = signal(false);
   usersError = signal('');
 
@@ -53,7 +58,6 @@ export class UsersComponent implements OnInit {
   // Modal Tạo tài khoản nhân sự
   showCreateModal = signal(false);
   isCreatingUser = signal(false);
-  createError = signal('');
   newFullName = '';
   newEmail = '';
   newPhone = '';
@@ -65,7 +69,6 @@ export class UsersComponent implements OnInit {
   targetUserForRoles = signal<User | null>(null);
   selectedEditRoles = new Set<string>();
   isSavingRoles = signal(false);
-  rolesModalError = signal('');
 
   // Modal Xác nhận Khóa / Mở khóa tài khoản
   showStatusModal = signal(false);
@@ -79,16 +82,17 @@ export class UsersComponent implements OnInit {
   profileFullName = '';
   profilePhone = '';
   isSavingProfile = signal(false);
-  profileError = signal('');
 
   currentPassword = '';
   newPasswordInput = '';
   confirmPasswordInput = '';
   showPasswords = false;
   isSavingPassword = signal(false);
-  passwordError = signal('');
 
-  constructor(public authService: AuthService) {}
+  constructor(
+    public authService: AuthService,
+    private toastService: ToastService
+  ) {}
 
   ngOnInit(): void {
     this.syncProfileForm();
@@ -125,20 +129,21 @@ export class UsersComponent implements OnInit {
     this.authService.getRoles().subscribe({
       next: list => this.roles.set(list),
       error: () => {
-        // Fallback hiển thị bộ 5 vai trò chuẩn nếu chưa tải được danh mục
+        // Fallback hiển thị danh mục mặc định nếu chưa tải được
       }
     });
-    this.loadUsers();
+    this.loadUsers(1);
   }
 
-  loadUsers(): void {
+  loadUsers(page = 1): void {
     this.isLoadingUsers.set(true);
     this.usersError.set('');
+    this.currentPage.set(page);
 
     this.authService
       .getUsers({
-        page: 1,
-        size: 50,
+        page,
+        size: this.pageSize(),
         q: this.searchQuery,
         role_code: this.filterRole || undefined,
         status: this.filterStatus || undefined
@@ -147,14 +152,16 @@ export class UsersComponent implements OnInit {
         next: res => {
           this.users.set(res.items);
           this.totalUsers.set(res.total);
+          this.totalPages.set(res.pages);
           this.isLoadingUsers.set(false);
         },
         error: err => {
           this.isLoadingUsers.set(false);
-          this.usersError.set(
+          const msg =
             err.error?.message ||
-              'Chưa thể tải danh sách nhân sự từ Auth Service (:8001). Vui lòng kiểm tra quyền ADMIN và kết nối backend.'
-          );
+            'Chưa thể tải danh sách nhân sự từ Auth Service (:8001). Vui lòng kiểm tra quyền ADMIN và kết nối backend.';
+          this.usersError.set(msg);
+          this.toastService.error(msg);
         }
       });
   }
@@ -163,7 +170,7 @@ export class UsersComponent implements OnInit {
     this.searchQuery = '';
     this.filterRole = '';
     this.filterStatus = '';
-    this.loadUsers();
+    this.loadUsers(1);
   }
 
   // ===========================================================================
@@ -175,7 +182,6 @@ export class UsersComponent implements OnInit {
     this.newPhone = '';
     this.newPassword = '';
     this.selectedCreateRoles = new Set<string>(['STAFF']);
-    this.createError.set('');
     this.showCreateModal.set(true);
   }
 
@@ -192,21 +198,20 @@ export class UsersComponent implements OnInit {
   }
 
   submitCreateUser(): void {
-    this.createError.set('');
     if (!this.newFullName.trim() || this.newFullName.trim().length < 2) {
-      this.createError.set('Họ và tên phải có tối thiểu 2 ký tự.');
+      this.toastService.error('Họ và tên phải có tối thiểu 2 ký tự.');
       return;
     }
     if (!this.newEmail.trim() || !this.newEmail.includes('@')) {
-      this.createError.set('Vui lòng nhập địa chỉ email hợp lệ.');
+      this.toastService.error('Vui lòng nhập địa chỉ email hợp lệ.');
       return;
     }
     if (!this.newPassword || this.newPassword.length < 6) {
-      this.createError.set('Mật khẩu khởi tạo phải có tối thiểu 6 ký tự.');
+      this.toastService.error('Mật khẩu khởi tạo phải có tối thiểu 6 ký tự.');
       return;
     }
     if (this.selectedCreateRoles.size === 0) {
-      this.createError.set('Vui lòng chọn ít nhất một vai trò cho tài khoản.');
+      this.toastService.error('Vui lòng chọn ít nhất một vai trò cho tài khoản.');
       return;
     }
 
@@ -223,15 +228,14 @@ export class UsersComponent implements OnInit {
         next: created => {
           this.isCreatingUser.set(false);
           this.showCreateModal.set(false);
-          this.loadUsers();
-          this.showToast(
-            `Đã tạo tài khoản "${created.full_name}" (${created.email}) thành công.`,
-            'success'
+          this.loadUsers(this.currentPage());
+          this.toastService.success(
+            `Đã tạo tài khoản "${created.full_name}" (${created.email}) thành công.`
           );
         },
         error: err => {
           this.isCreatingUser.set(false);
-          this.createError.set(
+          this.toastService.error(
             err.error?.message || 'Không thể tạo tài khoản mới. Vui lòng kiểm tra lại.'
           );
         }
@@ -245,7 +249,6 @@ export class UsersComponent implements OnInit {
     this.targetUserForRoles.set(user);
     const codes = (user.roles || []).map(r => (typeof r === 'string' ? r : r.code));
     this.selectedEditRoles = new Set<string>(codes);
-    this.rolesModalError.set('');
     this.showRolesModal.set(true);
   }
 
@@ -266,9 +269,8 @@ export class UsersComponent implements OnInit {
     const target = this.targetUserForRoles();
     if (!target) return;
 
-    this.rolesModalError.set('');
     if (this.selectedEditRoles.size === 0) {
-      this.rolesModalError.set('Tài khoản phải có ít nhất một vai trò.');
+      this.toastService.error('Tài khoản phải có ít nhất một vai trò.');
       return;
     }
 
@@ -279,15 +281,14 @@ export class UsersComponent implements OnInit {
         next: updated => {
           this.isSavingRoles.set(false);
           this.closeRolesModal();
-          this.loadUsers();
-          this.showToast(
-            `Đã cập nhật vai trò cho tài khoản "${updated.full_name}".`,
-            'success'
+          this.loadUsers(this.currentPage());
+          this.toastService.success(
+            `Đã cập nhật vai trò cho tài khoản "${updated.full_name}".`
           );
         },
         error: err => {
           this.isSavingRoles.set(false);
-          this.rolesModalError.set(
+          this.toastService.error(
             err.error?.message || 'Không thể cập nhật vai trò tài khoản.'
           );
         }
@@ -314,17 +315,16 @@ export class UsersComponent implements OnInit {
       next: updated => {
         this.isSavingStatus.set(false);
         this.closeStatusModal();
-        this.loadUsers();
+        this.loadUsers(this.currentPage());
         const label =
           updated.status === 'ACTIVE' ? 'mở khóa (Hoạt động)' : 'khóa tài khoản';
-        this.showToast(`Đã ${label} cho "${updated.full_name}".`, 'success');
+        this.toastService.success(`Đã ${label} cho "${updated.full_name}".`);
       },
       error: err => {
         this.isSavingStatus.set(false);
         this.closeStatusModal();
-        this.showToast(
-          err.error?.message || 'Không thể thay đổi trạng thái tài khoản.',
-          'error'
+        this.toastService.error(
+          err.error?.message || 'Không thể thay đổi trạng thái tài khoản.'
         );
       }
     });
@@ -334,9 +334,8 @@ export class UsersComponent implements OnInit {
   // 4. HỒ SƠ CÁ NHÂN & ĐỔI MẬT KHẨU
   // ===========================================================================
   submitProfileUpdate(): void {
-    this.profileError.set('');
     if (!this.profileFullName.trim() || this.profileFullName.trim().length < 2) {
-      this.profileError.set('Họ và tên phải có tối thiểu 2 ký tự.');
+      this.toastService.error('Họ và tên phải có tối thiểu 2 ký tự.');
       return;
     }
 
@@ -349,11 +348,11 @@ export class UsersComponent implements OnInit {
       .subscribe({
         next: () => {
           this.isSavingProfile.set(false);
-          this.showToast('Đã cập nhật thông tin hồ sơ cá nhân thành công.', 'success');
+          this.toastService.success('Đã cập nhật thông tin hồ sơ cá nhân thành công.');
         },
         error: err => {
           this.isSavingProfile.set(false);
-          this.profileError.set(
+          this.toastService.error(
             err.error?.message || 'Không thể cập nhật thông tin cá nhân.'
           );
         }
@@ -361,17 +360,16 @@ export class UsersComponent implements OnInit {
   }
 
   submitChangePassword(): void {
-    this.passwordError.set('');
     if (!this.currentPassword) {
-      this.passwordError.set('Vui lòng nhập mật khẩu hiện tại.');
+      this.toastService.error('Vui lòng nhập mật khẩu hiện tại.');
       return;
     }
     if (!this.newPasswordInput || this.newPasswordInput.length < 6) {
-      this.passwordError.set('Mật khẩu mới phải có tối thiểu 6 ký tự.');
+      this.toastService.error('Mật khẩu mới phải có tối thiểu 6 ký tự.');
       return;
     }
     if (this.newPasswordInput !== this.confirmPasswordInput) {
-      this.passwordError.set('Mật khẩu xác nhận không khớp với mật khẩu mới.');
+      this.toastService.error('Mật khẩu xác nhận không khớp với mật khẩu mới.');
       return;
     }
 
@@ -387,11 +385,11 @@ export class UsersComponent implements OnInit {
           this.currentPassword = '';
           this.newPasswordInput = '';
           this.confirmPasswordInput = '';
-          this.showToast(res.message, 'success');
+          this.toastService.success(res.message);
         },
         error: err => {
           this.isSavingPassword.set(false);
-          this.passwordError.set(
+          this.toastService.error(
             err.error?.message || 'Đổi mật khẩu không thành công. Vui lòng kiểm tra lại.'
           );
         }
@@ -421,19 +419,5 @@ export class UsersComponent implements OnInit {
       default:
         return status;
     }
-  }
-
-  showToast(message: string, type: 'success' | 'error' = 'success'): void {
-    this.toastMessage.set(message);
-    this.toastType.set(type);
-    setTimeout(() => {
-      if (this.toastMessage() === message) {
-        this.toastMessage.set('');
-      }
-    }, 4500);
-  }
-
-  logout(): void {
-    this.authService.logout();
   }
 }

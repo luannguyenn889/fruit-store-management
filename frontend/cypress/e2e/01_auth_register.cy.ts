@@ -22,7 +22,7 @@ describe('FR-A01 - Đăng ký tài khoản công khai (/register)', () => {
     cy.get('input[name="agreeTerms"]').should('be.checked');
     cy.get('button[type="submit"]').click();
 
-    cy.url({ timeout: 15000 }).should('include', '/dashboard');
+    cy.url({ timeout: 15000 }).should('include', '/shop');
     cy.window().then(win => {
       const userRaw = win.localStorage.getItem('fruitstore_user');
       expect(userRaw).to.not.be.null;

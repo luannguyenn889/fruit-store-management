@@ -22,8 +22,9 @@ import {
   throwError
 } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { environment } from '../../../environments/environment';
 
-const GATEWAY_PREFIX = 'http://localhost:8000/api/v1/';
+const GATEWAY_PREFIX = `${environment.apiBaseUrl}/`;
 const SKIP_REFRESH_PATHS = [
   '/auth/login',
   '/auth/register',

@@ -9,6 +9,9 @@ import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, catchError, of, tap } from 'rxjs';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
+
+export const INTERNAL_ROLES = ['ADMIN', 'MANAGER', 'STAFF', 'WAREHOUSE'] as const;
 
 export type UserStatus = 'ACTIVE' | 'LOCKED' | 'INACTIVE';
 
@@ -88,9 +91,8 @@ export interface UserFilterParams {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly apiUrl = 'http://localhost:8000/api/v1/auth';
-  readonly googleClientId =
-    '569426721711-6ub3hgomi74b201otif6cpe3oq53s5fj.apps.googleusercontent.com';
+  private readonly apiUrl = `${environment.apiBaseUrl}/auth`;
+  readonly googleClientId = environment.googleClientId;
 
   private readonly tokenKey = 'fruitstore_access_token';
   private readonly refreshTokenKey = 'fruitstore_refresh_token';
@@ -272,6 +274,21 @@ export class AuthService {
       const code = typeof r === 'string' ? r : r.code;
       return upperAllowed.has(code.toUpperCase());
     });
+  }
+
+  /** Kiểm tra tài khoản hiện tại có thuộc nhóm nhân sự nội bộ (ADMIN/MANAGER/STAFF/WAREHOUSE) không */
+  isInternalUser(): boolean {
+    return this.hasRole(...INTERNAL_ROLES);
+  }
+
+  /** Kiểm tra tài khoản đã đăng nhập nhưng chỉ có vai trò khách hàng (CUSTOMER) */
+  isCustomerOnly(): boolean {
+    return this.isLoggedIn() && !this.isInternalUser();
+  }
+
+  /** Xác định route mặc định sau đăng nhập dựa theo vai trò tài khoản */
+  getDefaultRoute(): string {
+    return this.isInternalUser() ? '/dashboard' : '/shop';
   }
 
   /** Trả về tên hiển thị vai trò chính bằng tiếng Việt của người dùng hiện tại */

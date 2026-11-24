@@ -1,0 +1,312 @@
+/* =============================================================================
+   MODULE: Storefront Layout Styles
+   NHIỆM VỤ: Định kiểu Header + Footer dùng chung cho Cửa hàng Khách hàng (/shop, /profile)
+   ============================================================================= */
+
+.storefront-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+.sf-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-subtle);
+}
+
+.sf-header-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sf-left {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.sf-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.sf-brand-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-brand-700);
+  color: var(--color-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sf-brand-badge svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sf-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.sf-brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.sf-brand-sub {
+  font-size: 11px;
+  color: var(--color-brand-600);
+  font-weight: 500;
+}
+
+.sf-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sf-nav-link {
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.sf-nav-link:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.sf-nav-link.active {
+  background-color: var(--color-brand-50);
+  color: var(--color-brand-700);
+}
+
+.sf-admin-entry {
+  color: var(--color-brand-700);
+  border: 1px solid var(--color-brand-100);
+  background-color: var(--color-brand-50);
+}
+
+.sf-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sf-user-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sf-user-meta {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast);
+}
+
+.sf-user-meta:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.sf-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.sf-user-role {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.logout-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.logout-icon-btn:hover {
+  border-color: var(--color-danger);
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.logout-icon-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.sf-auth-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sf-btn-outline,
+.sf-btn-primary {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.sf-btn-outline {
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.sf-btn-outline:hover {
+  border-color: var(--color-brand-600);
+  color: var(--color-brand-700);
+}
+
+.sf-btn-primary {
+  background-color: var(--color-brand-700);
+  color: var(--color-surface);
+  border: 1px solid var(--color-brand-700);
+}
+
+.sf-btn-primary:hover {
+  background-color: var(--color-brand-800);
+}
+
+.sf-mobile-toggle {
+  display: none;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  align-items: center;
+  justify-content: center;
+}
+
+.sf-mobile-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sf-mobile-drawer {
+  border-top: 1px solid var(--color-border-light);
+  background-color: var(--color-surface);
+  padding: 12px 20px 16px;
+}
+
+.sf-mobile-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sf-mobile-link {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.sf-mobile-link.active {
+  background-color: var(--color-brand-50);
+  color: var(--color-brand-700);
+}
+
+.sf-mobile-auth {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.sf-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.sf-footer {
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border-light);
+  margin-top: 32px;
+}
+
+.sf-footer-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.sf-footer-note {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .sf-header-inner {
+    padding: 0 16px;
+  }
+  .desktop-nav,
+  .desktop-auth,
+  .sf-user-meta {
+    display: none;
+  }
+  .sf-mobile-toggle {
+    display: inline-flex;
+  }
+  .sf-main {
+    padding: 16px;
+  }
+  .sf-footer-inner {
+    flex-direction: column;
+    text-align: center;
+    padding: 16px;
+  }
+}

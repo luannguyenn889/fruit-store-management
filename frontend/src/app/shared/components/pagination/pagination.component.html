@@ -1,0 +1,31 @@
+<!-- ==========================================================================
+     MODULE: shared/components/pagination/pagination.component.html
+     NHIỆM VỤ: Thanh điều hướng trang (Trang trước / Trang sau) cho bảng dữ liệu.
+     ========================================================================== -->
+
+@if (totalItems > 0) {
+  <div class="pagination-bar" role="navigation" aria-label="Phân trang dữ liệu">
+    <span class="pagination-summary">
+      Trang <b>{{ currentPage }}</b> / <b>{{ totalPages }}</b> (Tổng <b>{{ totalItems }}</b> bản ghi)
+    </span>
+
+    <div class="pagination-controls">
+      <button
+        type="button"
+        class="page-btn"
+        [disabled]="currentPage <= 1"
+        (click)="goToPage(currentPage - 1)"
+      >
+        Trang trước
+      </button>
+      <button
+        type="button"
+        class="page-btn"
+        [disabled]="currentPage >= totalPages"
+        (click)="goToPage(currentPage + 1)"
+      >
+        Trang sau
+      </button>
+    </div>
+  </div>
+}

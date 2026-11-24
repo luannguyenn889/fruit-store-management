@@ -2,8 +2,7 @@
  * Module: features/auth/register/register.component.ts
  * Nhiệm vụ: Màn hình đăng ký tài khoản khách hàng mới của hệ thống FruitStore.
  *           - Bảo mật (FR-A01): Không gửi `role_code` lên server; hệ thống luôn gán vai trò `CUSTOMER`.
- *           - Bảo mật Google OAuth2: Đã loại bỏ `mockGoogleLoginFallback`, chỉ chấp nhận
- *             Google ID Token hợp lệ được xác thực chữ ký tại Backend.
+ *           - Hiển thị thông báo validation và kết quả qua Global `ToastService` (thay thế alert cố định).
  */
 
 import { Component, OnInit, signal } from '@angular/core';
@@ -11,6 +10,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 declare const google: any;
 
@@ -31,9 +31,12 @@ export class RegisterComponent implements OnInit {
   showPassword = false;
   showConfirmPassword = false;
   isLoading = signal(false);
-  errorMessage = signal('');
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(
+    private authService: AuthService,
+    private toastService: ToastService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.initGoogleAuth();
@@ -48,30 +51,28 @@ export class RegisterComponent implements OnInit {
   }
 
   onSubmit(): void {
-    this.errorMessage.set('');
-
     if (!this.fullName.trim()) {
-      this.errorMessage.set('Vui lòng nhập họ và tên đầy đủ.');
+      this.toastService.error('Vui lòng nhập họ và tên đầy đủ.');
       return;
     }
 
     if (!this.contact.trim()) {
-      this.errorMessage.set('Vui lòng nhập địa chỉ email hoặc số điện thoại.');
+      this.toastService.error('Vui lòng nhập địa chỉ email hoặc số điện thoại.');
       return;
     }
 
     if (!this.password || this.password.length < 6) {
-      this.errorMessage.set('Mật khẩu phải có tối thiểu 6 ký tự.');
+      this.toastService.error('Mật khẩu phải có tối thiểu 6 ký tự.');
       return;
     }
 
     if (this.password !== this.confirmPassword) {
-      this.errorMessage.set('Mật khẩu xác nhận không khớp. Vui lòng nhập lại.');
+      this.toastService.error('Mật khẩu xác nhận không khớp. Vui lòng nhập lại.');
       return;
     }
 
     if (!this.agreeTerms) {
-      this.errorMessage.set(
+      this.toastService.error(
         'Bạn cần đồng ý với Điều khoản dịch vụ và Chính sách bảo mật để tiếp tục.'
       );
       return;
@@ -97,10 +98,12 @@ export class RegisterComponent implements OnInit {
           this.authService.login(email, this.password).subscribe({
             next: () => {
               this.isLoading.set(false);
-              this.router.navigate(['/dashboard']);
+              this.toastService.success('Đăng ký tài khoản thành công.');
+              this.router.navigate([this.authService.getDefaultRoute()]);
             },
             error: () => {
               this.isLoading.set(false);
+              this.toastService.success('Đăng ký tài khoản thành công. Vui lòng đăng nhập.');
               this.router.navigate(['/login']);
             }
           });
@@ -111,7 +114,7 @@ export class RegisterComponent implements OnInit {
             err.error?.message ||
             err.error?.detail ||
             'Không thể đăng ký tài khoản. Vui lòng kiểm tra lại thông tin đã nhập.';
-          this.errorMessage.set(message);
+          this.toastService.error(message);
         }
       });
   }
@@ -126,7 +129,6 @@ export class RegisterComponent implements OnInit {
   }
 
   triggerGoogleSignIn(): void {
-    this.errorMessage.set('');
     if (typeof google !== 'undefined' && google.accounts?.id) {
       google.accounts.id.initialize({
         client_id: this.authService.googleClientId,
@@ -134,25 +136,25 @@ export class RegisterComponent implements OnInit {
       });
       google.accounts.id.prompt((notification: any) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          this.errorMessage.set(
+          this.toastService.error(
             'Không thể hiển thị cửa sổ đăng ký Google (popup bị chặn hoặc origin chưa được ủy quyền). Vui lòng điền biểu mẫu đăng ký bên trên.'
           );
         }
       });
     } else {
-      this.errorMessage.set(
+      this.toastService.error(
         'Không tải được dịch vụ Google Identity. Vui lòng sử dụng biểu mẫu đăng ký bằng Email.'
       );
     }
   }
 
   private handleGoogleCredential(credential: string): void {
-    this.errorMessage.set('');
     this.isLoading.set(true);
     this.authService.loginWithGoogle(credential).subscribe({
       next: () => {
         this.isLoading.set(false);
-        this.router.navigate(['/dashboard']);
+        this.toastService.success('Đăng ký tài khoản thành công.');
+        this.router.navigate([this.authService.getDefaultRoute()]);
       },
       error: err => {
         this.isLoading.set(false);
@@ -160,7 +162,7 @@ export class RegisterComponent implements OnInit {
           err.error?.message ||
           err.error?.detail ||
           'Đăng ký nhanh bằng Google không thành công.';
-        this.errorMessage.set(message);
+        this.toastService.error(message);
       }
     });
   }

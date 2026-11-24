@@ -1,10 +1,10 @@
 /**
  * Module: app.routes.ts
- * Nhiệm vụ: Định nghĩa bảng định tuyến (Routing) cho ứng dụng Angular FruitStore:
+ * Nhiệm vụ: Định nghĩa bảng định tuyến (Routing) và phân tách khu vực theo vai trò RBAC:
+ *           - `/shop`: Cửa hàng trực tuyến (Storefront) công khai cho Khách hàng.
+ *           - `/profile`: Hồ sơ cá nhân & đổi mật khẩu cho Khách hàng (yêu cầu đăng nhập).
  *           - `/login`, `/register`: Màn hình xác thực.
- *           - `/dashboard`: Màn hình tổng quan quản trị cửa hàng.
- *           - `/catalog`: Màn hình quản lý Danh mục, Sản phẩm & Lịch sử Đơn giá (Catalog Service).
- *           - `/users`: Màn hình Cấu hình, Hồ sơ cá nhân & Quản trị Nhân sự (Auth Service).
+ *           - `/dashboard`, `/catalog`, `/users`: Khu vực quản trị nội bộ (chặn `CUSTOMER` bằng `roleGuard`).
  */
 
 import { Routes } from '@angular/router';
@@ -13,14 +13,32 @@ import { RegisterComponent } from './features/auth/register/register.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { CatalogComponent } from './features/catalog/catalog.component';
 import { UsersComponent } from './features/users/users.component';
-import { authGuard } from './core/guards/auth.guard';
+import { ShopComponent } from './features/shop/shop.component';
+import { CustomerProfileComponent } from './features/profile/customer-profile.component';
+import { authGuard, homeRedirectGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
+import { INTERNAL_ROLES } from './core/services/auth.service';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+  { path: '', pathMatch: 'full', component: ShopComponent, canActivate: [homeRedirectGuard] },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-  { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
-  { path: 'catalog', component: CatalogComponent, canActivate: [authGuard] },
-  { path: 'users', component: UsersComponent, canActivate: [authGuard] },
-  { path: '**', redirectTo: 'dashboard' },
+  { path: 'shop', component: ShopComponent },
+  { path: 'profile', component: CustomerProfileComponent, canActivate: [authGuard] },
+  {
+    path: 'dashboard',
+    component: DashboardComponent,
+    canActivate: [authGuard, roleGuard(INTERNAL_ROLES)]
+  },
+  {
+    path: 'catalog',
+    component: CatalogComponent,
+    canActivate: [authGuard, roleGuard(INTERNAL_ROLES)]
+  },
+  {
+    path: 'users',
+    component: UsersComponent,
+    canActivate: [authGuard, roleGuard(INTERNAL_ROLES)]
+  },
+  { path: '**', redirectTo: '' }
 ];

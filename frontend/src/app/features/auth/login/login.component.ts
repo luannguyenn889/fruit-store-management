@@ -3,8 +3,7 @@
  * Nhiệm vụ: Xử lý giao diện và sự kiện đăng nhập hệ thống FruitStore.
  *           - Hỗ trợ đăng nhập bằng Email/SĐT + mật khẩu qua API Gateway.
  *           - Hỗ trợ đăng nhập bằng Google OAuth2 (Google Identity Services).
- *           - Đã loại bỏ hoàn toàn `mockGoogleLoginFallback` để đảm bảo tính trung thực
- *             và bảo mật (Honest UI & SRS Security Fix).
+ *           - Hiển thị phản hồi thành công/lỗi qua Global `ToastService` (thay thế alert cố định).
  */
 
 import { Component, OnInit, signal } from '@angular/core';
@@ -12,6 +11,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 declare const google: any;
 
@@ -30,9 +30,12 @@ export class LoginComponent implements OnInit {
 
   showPassword = false;
   isLoading = signal(false);
-  errorMessage = signal('');
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(
+    private authService: AuthService,
+    private toastService: ToastService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.initGoogleAuth();
@@ -43,10 +46,8 @@ export class LoginComponent implements OnInit {
   }
 
   onSubmit(): void {
-    this.errorMessage.set('');
-
     if (!this.contact.trim() || !this.password) {
-      this.errorMessage.set('Vui lòng nhập đầy đủ email/số điện thoại và mật khẩu.');
+      this.toastService.error('Vui lòng nhập đầy đủ email/số điện thoại và mật khẩu.');
       return;
     }
 
@@ -54,7 +55,8 @@ export class LoginComponent implements OnInit {
     this.authService.login(this.contact.trim(), this.password).subscribe({
       next: () => {
         this.isLoading.set(false);
-        this.router.navigate(['/dashboard']);
+        this.toastService.success('Đăng nhập thành công.');
+        this.router.navigate([this.authService.getDefaultRoute()]);
       },
       error: err => {
         this.isLoading.set(false);
@@ -62,7 +64,7 @@ export class LoginComponent implements OnInit {
           err.error?.message ||
           err.error?.detail ||
           'Email/số điện thoại hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.';
-        this.errorMessage.set(message);
+        this.toastService.error(message);
       }
     });
   }
@@ -77,7 +79,6 @@ export class LoginComponent implements OnInit {
   }
 
   triggerGoogleSignIn(): void {
-    this.errorMessage.set('');
     if (typeof google !== 'undefined' && google.accounts?.id) {
       google.accounts.id.initialize({
         client_id: this.authService.googleClientId,
@@ -85,25 +86,25 @@ export class LoginComponent implements OnInit {
       });
       google.accounts.id.prompt((notification: any) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          this.errorMessage.set(
+          this.toastService.error(
             'Không thể mở hộp thoại Google (trình duyệt đã chặn popup hoặc domain chưa được cấp phép trên Google Cloud Console). Vui lòng đăng nhập bằng Email và mật khẩu.'
           );
         }
       });
     } else {
-      this.errorMessage.set(
+      this.toastService.error(
         'Thư viện Google Identity Services chưa tải xong. Vui lòng kiểm tra kết nối mạng hoặc đăng nhập bằng mật khẩu.'
       );
     }
   }
 
   private handleGoogleCredential(credential: string): void {
-    this.errorMessage.set('');
     this.isLoading.set(true);
     this.authService.loginWithGoogle(credential).subscribe({
       next: () => {
         this.isLoading.set(false);
-        this.router.navigate(['/dashboard']);
+        this.toastService.success('Đăng nhập thành công.');
+        this.router.navigate([this.authService.getDefaultRoute()]);
       },
       error: err => {
         this.isLoading.set(false);
@@ -111,7 +112,7 @@ export class LoginComponent implements OnInit {
           err.error?.message ||
           err.error?.detail ||
           'Xác thực tài khoản Google không thành công. Vui lòng thử lại.';
-        this.errorMessage.set(message);
+        this.toastService.error(message);
       }
     });
   }

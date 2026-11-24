@@ -2,10 +2,8 @@
  * Module: features/catalog/catalog.component.ts
  * Nhiệm vụ: Màn hình Quản lý Danh mục, Sản phẩm Trái cây & Lịch sử Đơn giá (Catalog Management UI).
  *           Tuân thủ nghiêm ngặt `FRONTEND_DESIGN_RULES.md` và `UI_UX_DESIGN_RULES_FruitStore.md`:
- *           - Hiển thị trung thực dữ liệu từ API Gateway (`/api/v1/catalog/*`), có đầy đủ trạng thái
- *             Loading, Empty, Error (kèm nút Thử lại) và Success chỉ sau khi Server xác nhận.
- *           - Thể hiện rõ đơn vị tính (`kg`, `hộp`, `quả`), định dạng tiền Việt Nam (`65.000 ₫/kg`),
- *             điều kiện bảo quản (`2–8°C`, `8–12°C`, `Nhiệt độ phòng`) và hạn dùng gợi ý.
+ *           - Dùng `ToastService` toàn cục cho phản hồi thành công/lỗi thay thế hộp alert nội tuyến.
+ *           - Dùng `SkeletonLoaderComponent` cho trạng thái đang tải bảng sản phẩm và lịch sử giá.
  *           - Tách biệt hoàn toàn thao tác "Sửa thông tin sản phẩm" (`PATCH`) với "Điều chỉnh đơn giá"
  *             (`POST /products/{id}/price`) để đảm bảo mọi biến động giá đều lưu vết `PriceHistory`.
  */
@@ -13,7 +11,6 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { AuthService, User } from '../../core/services/auth.service';
 import {
   CatalogService,
@@ -24,11 +21,21 @@ import {
   ProductUnit,
   StorageCondition
 } from '../../core/services/catalog.service';
+import { ToastService } from '../../core/services/toast.service';
+import { AdminLayoutComponent } from '../../core/layout/admin-layout/admin-layout.component';
+import { SkeletonLoaderComponent } from '../../shared/components/skeleton-loader/skeleton-loader.component';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-catalog',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    FormsModule,
+    AdminLayoutComponent,
+    SkeletonLoaderComponent,
+    PaginationComponent
+  ],
   templateUrl: './catalog.component.html',
   styleUrls: ['./catalog.component.css']
 })
@@ -55,13 +62,10 @@ export class CatalogComponent implements OnInit {
   // Trạng thái bất đồng bộ trung thực (Honest UI)
   isLoading = signal(false);
   loadError = signal('');
-  toastMessage = signal('');
-  toastType = signal<'success' | 'error'>('success');
 
   // Modal Tạo Danh Mục
   showCategoryModal = signal(false);
   isSavingCategory = signal(false);
-  categoryError = signal('');
   newCategoryName = '';
   newCategoryDesc = '';
 
@@ -70,7 +74,6 @@ export class CatalogComponent implements OnInit {
   isEditingProduct = signal(false);
   editingProductId = signal<string | null>(null);
   isSavingProduct = signal(false);
-  productFormError = signal('');
 
   formCategoryId = '';
   formSku = '';
@@ -89,7 +92,6 @@ export class CatalogComponent implements OnInit {
   newPriceInput = '';
   priceReasonInput = '';
   isSavingPrice = signal(false);
-  priceModalError = signal('');
   priceHistoryList = signal<PriceHistoryRecord[]>([]);
   isLoadingHistory = signal(false);
 
@@ -103,7 +105,8 @@ export class CatalogComponent implements OnInit {
 
   constructor(
     public authService: AuthService,
-    private catalogService: CatalogService
+    private catalogService: CatalogService,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -152,6 +155,7 @@ export class CatalogComponent implements OnInit {
             err.error?.message ||
             'Chưa thể tải dữ liệu sản phẩm từ máy chủ (API Gateway :8000 / Catalog Service :8002). Vui lòng kiểm tra kết nối backend và thử lại.';
           this.loadError.set(msg);
+          this.toastService.error(msg);
         }
       });
   }
@@ -174,7 +178,6 @@ export class CatalogComponent implements OnInit {
   openCategoryModal(): void {
     this.newCategoryName = '';
     this.newCategoryDesc = '';
-    this.categoryError.set('');
     this.showCategoryModal.set(true);
   }
 
@@ -183,9 +186,8 @@ export class CatalogComponent implements OnInit {
   }
 
   submitCreateCategory(): void {
-    this.categoryError.set('');
     if (!this.newCategoryName.trim() || this.newCategoryName.trim().length < 2) {
-      this.categoryError.set('Tên danh mục phải có tối thiểu 2 ký tự.');
+      this.toastService.error('Tên danh mục phải có tối thiểu 2 ký tự.');
       return;
     }
 
@@ -201,12 +203,13 @@ export class CatalogComponent implements OnInit {
           this.isSavingCategory.set(false);
           this.showCategoryModal.set(false);
           this.loadCategories();
-          this.showToast(`Đã tạo danh mục "${created.name}" thành công.`, 'success');
+          this.toastService.success(`Đã tạo danh mục "${created.name}" thành công.`);
         },
         error: err => {
           this.isSavingCategory.set(false);
-          this.categoryError.set(
-            err.error?.message || 'Không thể tạo danh mục. Vui lòng kiểm tra quyền hạn hoặc tên danh mục.'
+          this.toastService.error(
+            err.error?.message ||
+              'Không thể tạo danh mục. Vui lòng kiểm tra quyền hạn hoặc tên danh mục.'
           );
         }
       });
@@ -228,7 +231,6 @@ export class CatalogComponent implements OnInit {
   openCreateProductModal(): void {
     this.isEditingProduct.set(false);
     this.editingProductId.set(null);
-    this.productFormError.set('');
 
     const firstCat = this.categories()[0];
     this.formCategoryId = this.selectedCategoryId || (firstCat ? firstCat.id : '');
@@ -248,7 +250,6 @@ export class CatalogComponent implements OnInit {
   openEditProductModal(product: Product): void {
     this.isEditingProduct.set(true);
     this.editingProductId.set(product.id);
-    this.productFormError.set('');
 
     this.formCategoryId = product.category_id;
     this.formSku = product.sku;
@@ -269,29 +270,27 @@ export class CatalogComponent implements OnInit {
   }
 
   submitProductForm(): void {
-    this.productFormError.set('');
-
     if (!this.formCategoryId) {
-      this.productFormError.set('Vui lòng chọn danh mục trái cây trước khi lưu.');
+      this.toastService.error('Vui lòng chọn danh mục trái cây trước khi lưu.');
       return;
     }
     if (!this.formName.trim() || this.formName.trim().length < 2) {
-      this.productFormError.set('Tên sản phẩm phải có từ 2 ký tự trở lên.');
+      this.toastService.error('Tên sản phẩm phải có từ 2 ký tự trở lên.');
       return;
     }
     if (!this.isEditingProduct() && (!this.formSku.trim() || this.formSku.trim().length < 2)) {
-      this.productFormError.set('Vui lòng nhập mã SKU duy nhất (ví dụ: XOAI-HL-01).');
+      this.toastService.error('Vui lòng nhập mã SKU duy nhất (ví dụ: XOAI-HL-01).');
       return;
     }
     if (this.formShelfLifeDays <= 0) {
-      this.productFormError.set('Hạn sử dụng gợi ý phải lớn hơn 0 ngày.');
+      this.toastService.error('Hạn sử dụng gợi ý phải lớn hơn 0 ngày.');
       return;
     }
 
     if (!this.isEditingProduct()) {
       const numericPrice = Number(this.formPrice);
       if (Number.isNaN(numericPrice) || numericPrice < 0) {
-        this.productFormError.set('Đơn giá khởi tạo không hợp lệ (phải là số >= 0).');
+        this.toastService.error('Đơn giá khởi tạo không hợp lệ (phải là số >= 0).');
         return;
       }
 
@@ -314,14 +313,13 @@ export class CatalogComponent implements OnInit {
             this.isSavingProduct.set(false);
             this.showProductModal.set(false);
             this.loadProducts(this.currentPage());
-            this.showToast(
-              `Đã thêm sản phẩm "${created.name}" (${created.sku}) thành công.`,
-              'success'
+            this.toastService.success(
+              `Đã thêm sản phẩm "${created.name}" (${created.sku}) thành công.`
             );
           },
           error: err => {
             this.isSavingProduct.set(false);
-            this.productFormError.set(
+            this.toastService.error(
               err.error?.message ||
                 'Không thể thêm sản phẩm. Vui lòng kiểm tra mã SKU hoặc dữ liệu đã nhập.'
             );
@@ -348,11 +346,11 @@ export class CatalogComponent implements OnInit {
             this.isSavingProduct.set(false);
             this.showProductModal.set(false);
             this.loadProducts(this.currentPage());
-            this.showToast(`Đã cập nhật thông tin sản phẩm "${updated.name}".`, 'success');
+            this.toastService.success(`Đã cập nhật thông tin sản phẩm "${updated.name}".`);
           },
           error: err => {
             this.isSavingProduct.set(false);
-            this.productFormError.set(
+            this.toastService.error(
               err.error?.message || 'Cập nhật thông tin sản phẩm không thành công.'
             );
           }
@@ -388,14 +386,15 @@ export class CatalogComponent implements OnInit {
           this.isConfirmProcessing.set(false);
           this.closeConfirmModal();
           this.loadProducts(this.currentPage());
-          this.showToast(`Đã chuyển "${updated.name}" sang trạng thái Ngừng kinh doanh.`, 'success');
+          this.toastService.success(
+            `Đã chuyển "${updated.name}" sang trạng thái Ngừng kinh doanh.`
+          );
         },
         error: err => {
           this.isConfirmProcessing.set(false);
           this.closeConfirmModal();
-          this.showToast(
-            err.error?.message || 'Không thể ngừng kinh doanh sản phẩm.',
-            'error'
+          this.toastService.error(
+            err.error?.message || 'Không thể ngừng kinh doanh sản phẩm.'
           );
         }
       });
@@ -409,15 +408,14 @@ export class CatalogComponent implements OnInit {
           }
           this.loadCategories();
           this.loadProducts(1);
-          this.showToast('Đã xóa danh mục thành công.', 'success');
+          this.toastService.success('Đã xóa danh mục thành công.');
         },
         error: err => {
           this.isConfirmProcessing.set(false);
           this.closeConfirmModal();
-          this.showToast(
+          this.toastService.error(
             err.error?.message ||
-              'Không thể xóa danh mục vì danh mục vẫn đang chứa sản phẩm.',
-            'error'
+              'Không thể xóa danh mục vì danh mục vẫn đang chứa sản phẩm.'
           );
         }
       });
@@ -431,7 +429,6 @@ export class CatalogComponent implements OnInit {
     this.selectedProductForPrice.set(product);
     this.newPriceInput = String(Math.round(Number(product.price)));
     this.priceReasonInput = '';
-    this.priceModalError.set('');
     this.showPriceModal.set(true);
     this.fetchPriceHistory(product.id);
   }
@@ -459,22 +456,21 @@ export class CatalogComponent implements OnInit {
     const product = this.selectedProductForPrice();
     if (!product) return;
 
-    this.priceModalError.set('');
     const parsedPrice = Number(this.newPriceInput);
     if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
-      this.priceModalError.set('Đơn giá mới phải là số lớn hơn hoặc bằng 0.');
+      this.toastService.error('Đơn giá mới phải là số lớn hơn hoặc bằng 0.');
       return;
     }
 
     if (parsedPrice === Number(product.price)) {
-      this.priceModalError.set(
+      this.toastService.error(
         'Đơn giá mới trùng với đơn giá hiện tại. Vui lòng nhập mức giá khác.'
       );
       return;
     }
 
     if (!this.priceReasonInput.trim()) {
-      this.priceModalError.set(
+      this.toastService.error(
         'Vui lòng nhập lý do điều chỉnh giá (ví dụ: Giá mùa vụ, Khuyến mãi cuối tuần).'
       );
       return;
@@ -493,14 +489,13 @@ export class CatalogComponent implements OnInit {
           this.priceReasonInput = '';
           this.fetchPriceHistory(updated.id);
           this.loadProducts(this.currentPage());
-          this.showToast(
-            `Đã cập nhật giá "${updated.name}" thành ${this.formatVnd(updated.price)}/${this.formatUnitLabel(updated.unit)} và ghi nhận lịch sử giá.`,
-            'success'
+          this.toastService.success(
+            `Đã cập nhật giá "${updated.name}" thành ${this.formatVnd(updated.price)}/${this.formatUnitLabel(updated.unit)} và ghi nhận lịch sử giá.`
           );
         },
         error: err => {
           this.isSavingPrice.set(false);
-          this.priceModalError.set(
+          this.toastService.error(
             err.error?.message || 'Không thể cập nhật đơn giá sản phẩm.'
           );
         }
@@ -559,18 +554,7 @@ export class CatalogComponent implements OnInit {
     }
   }
 
-  showToast(message: string, type: 'success' | 'error' = 'success'): void {
-    this.toastMessage.set(message);
-    this.toastType.set(type);
-    setTimeout(() => {
-      if (this.toastMessage() === message) {
-        this.toastMessage.set('');
-      }
-    }, 4500);
-  }
-
   logout(): void {
     this.authService.logout();
   }
 }
-

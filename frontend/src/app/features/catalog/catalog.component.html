@@ -2,401 +2,277 @@
      MODULE: features/catalog/catalog.component.html
      NHIỆM VỤ: Giao diện Quản lý Danh mục, Sản phẩm Trái cây & Lịch sử Đơn giá.
      TUÂN THỦ: UI_UX_DESIGN_RULES_FruitStore.md & FRONTEND_DESIGN_RULES.md
-               (White-first layout, phân cấp rõ ràng, hiển thị đúng đơn vị kg/hộp/quả,
-               trạng thái Loading/Empty/Error trung thực, xác nhận thao tác nguy hiểm).
+               (AdminLayout dùng chung, Pagination, Skeleton Loading, Toast toàn cục).
      ========================================================================== -->
 
-<div class="catalog-layout">
-  <!-- LEFT SIDEBAR NAVIGATION -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <div class="brand-badge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
-          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-        </svg>
-      </div>
-      <div class="brand-text">
-        <h2 class="brand-title">Fresh Orchard</h2>
-        <span class="brand-subtitle">HỆ THỐNG TRÁI CÂY TƯƠI</span>
-      </div>
-    </div>
-
-    <div class="branch-selector-card">
-      <div class="branch-label">Điểm bán hiện tại</div>
-      <div class="branch-value">
-        <span class="branch-name">Cửa hàng & Kho Trung Tâm</span>
-      </div>
-    </div>
-
-    <nav class="sidebar-nav" aria-label="Điều hướng quản trị">
-      <div class="nav-section-title">TỔNG QUAN</div>
-      <a routerLink="/dashboard" class="nav-item">
-        <span class="nav-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"/>
-            <rect x="14" y="3" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/>
-          </svg>
-        </span>
-        <span class="nav-label">Tổng quan Dashboard</span>
-      </a>
-
-      <div class="nav-section-title">QUẢN LÝ KHO & SẢN PHẨM</div>
-      <a routerLink="/catalog" class="nav-item active">
-        <span class="nav-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
-            <path d="M2 12h20"/>
-          </svg>
-        </span>
-        <span class="nav-label">Danh mục & Sản phẩm</span>
-      </a>
-
-      <div class="nav-section-title">HỆ THỐNG</div>
-      <a routerLink="/users" class="nav-item">
-        <span class="nav-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-        </span>
-        <span class="nav-label">Cấu hình & Nhân sự</span>
-      </a>
-    </nav>
-
-    <div class="sidebar-status-box">
-      <div class="scale-status-title">
-        <span class="green-live-dot"></span>
-        <span class="status-strong">Catalog Service (:8002)</span>
-      </div>
-      <div class="scale-sub">Kết nối qua API Gateway (:8000)</div>
-    </div>
-  </aside>
-
-  <!-- MAIN VIEWPORT -->
-  <div class="main-viewport">
-    <!-- TOPBAR -->
-    <header class="catalog-topbar">
-      <div class="breadcrumb-area">
-        <span class="breadcrumb-muted">Quản lý kho & sản phẩm</span>
-        <span class="breadcrumb-sep">/</span>
-        <span class="breadcrumb-current">Danh mục & Sản phẩm Trái cây</span>
+<app-admin-layout sectionTitle="Quản lý kho & sản phẩm" pageTitle="Danh mục Sản phẩm">
+  <div class="catalog-content">
+    <!-- PAGE HEADER -->
+    <section class="page-header-row">
+      <div>
+        <h1 class="page-title">Danh mục & Sản phẩm Trái cây</h1>
+        <p class="page-subtitle">
+          Quản lý mã SKU, đơn vị bán (kg, hộp, quả), điều kiện bảo quản, hạn dùng gợi ý và lịch sử đơn giá (PriceHistory).
+        </p>
       </div>
 
-      <div class="topbar-right">
-        <div class="user-profile-widget">
-          <div class="user-info-text">
-            <div class="user-name">{{ currentUser()?.full_name || 'Người dùng' }}</div>
-            <div class="user-role">{{ authService.getPrimaryRoleLabel() }}</div>
+      @if (canManageCatalog()) {
+        <div class="header-actions">
+          <button type="button" class="secondary-btn" (click)="openCategoryModal()">
+            + Thêm danh mục
+          </button>
+          <button type="button" class="primary-btn" (click)="openCreateProductModal()">
+            + Thêm sản phẩm mới
+          </button>
+        </div>
+      }
+    </section>
+
+    <!-- CATEGORY PILLS STRIP (FR-B03) -->
+    <section class="categories-strip-card">
+      <div class="strip-header">
+        <span class="strip-label">Danh mục phân loại ({{ categories().length }})</span>
+      </div>
+      <div class="category-pills-wrap">
+        <button
+          type="button"
+          class="cat-pill"
+          [class.active]="selectedCategoryId === ''"
+          (click)="selectedCategoryId = ''; applyFilters()"
+        >
+          Tất cả danh mục
+        </button>
+
+        @for (cat of categories(); track cat.id) {
+          <div class="cat-pill-group" [class.active]="selectedCategoryId === cat.id">
+            <button
+              type="button"
+              class="cat-pill-main"
+              (click)="selectedCategoryId = cat.id; applyFilters()"
+            >
+              {{ cat.name }}
+            </button>
+            @if (canManageCatalog()) {
+              <button
+                type="button"
+                class="cat-pill-delete"
+                title="Xóa danh mục nếu chưa có sản phẩm"
+                [attr.aria-label]="'Xóa danh mục ' + cat.name"
+                (click)="confirmDeleteCategory(cat)"
+              >
+                ×
+              </button>
+            }
           </div>
-          <button
-            type="button"
-            class="logout-icon-btn"
-            (click)="logout()"
-            title="Đăng xuất khỏi hệ thống"
-            aria-label="Đăng xuất khỏi hệ thống"
+        }
+      </div>
+    </section>
+
+    <!-- FILTER BAR NEAR DATA TABLE -->
+    <section class="filter-bar-card">
+      <div class="filter-inputs-grid">
+        <div class="filter-field search-field">
+          <label for="search-sku-input" class="field-label">Tìm kiếm sản phẩm</label>
+          <input
+            id="search-sku-input"
+            type="text"
+            [(ngModel)]="searchQuery"
+            (keyup.enter)="applyFilters()"
+            placeholder="Nhập tên trái cây, mã SKU (VD: XOAI-HL-01) hoặc xuất xứ..."
+            class="text-input"
+          />
+        </div>
+
+        <div class="filter-field">
+          <label for="filter-category-select" class="field-label">Danh mục</label>
+          <select
+            id="filter-category-select"
+            [(ngModel)]="selectedCategoryId"
+            (change)="applyFilters()"
+            class="select-input"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
+            <option value="">Tất cả danh mục</option>
+            @for (cat of categories(); track cat.id) {
+              <option [value]="cat.id">{{ cat.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="filter-status-select" class="field-label">Trạng thái kinh doanh</label>
+          <select
+            id="filter-status-select"
+            [(ngModel)]="selectedStatus"
+            (change)="applyFilters()"
+            class="select-input"
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="ACTIVE">Đang kinh doanh</option>
+            <option value="OUT_OF_SEASON">Tạm hết mùa</option>
+            <option value="INACTIVE">Ngừng kinh doanh</option>
+          </select>
+        </div>
+
+        <div class="filter-actions">
+          <button type="button" class="primary-btn" (click)="applyFilters()">
+            Tìm kiếm
+          </button>
+          <button type="button" class="ghost-btn" (click)="resetFilters()">
+            Đặt lại
           </button>
         </div>
       </div>
-    </header>
+    </section>
 
-    <!-- MAIN CONTENT -->
-    <main class="catalog-content">
-      <!-- TOAST NOTIFICATION (Chỉ xuất hiện sau khi Server xác nhận) -->
-      @if (toastMessage()) {
-        <div
-          class="toast-banner"
-          [class.toast-error]="toastType() === 'error'"
-          role="status"
-        >
-          <span>{{ toastMessage() }}</span>
-          <button type="button" class="toast-close" (click)="toastMessage.set('')">✕</button>
+    <!-- DATA TABLE CARD -->
+    <section class="table-card">
+      <div class="table-card-header">
+        <h2 class="section-title">
+          Danh sách sản phẩm ({{ totalProducts() }} mặt hàng)
+        </h2>
+      </div>
+
+      @if (isLoading()) {
+        <app-skeleton-loader variant="table" [rows]="6" [columns]="7"></app-skeleton-loader>
+      }
+
+      @if (!isLoading() && loadError()) {
+        <div class="state-box error-state-box" role="alert">
+          <p class="state-title">Chưa tải được dữ liệu sản phẩm</p>
+          <p class="state-desc">{{ loadError() }}</p>
+          <button type="button" class="primary-btn" (click)="loadInitialData()">
+            Thử tải lại
+          </button>
         </div>
       }
 
-      <!-- PAGE HEADER -->
-      <section class="page-header-row">
-        <div>
-          <h1 class="page-title">Danh mục & Sản phẩm Trái cây</h1>
-          <p class="page-subtitle">
-            Quản lý mã SKU, đơn vị bán (kg, hộp, quả), điều kiện bảo quản, hạn dùng gợi ý và lịch sử đơn giá (PriceHistory).
+      @if (!isLoading() && !loadError() && products().length === 0) {
+        <div class="state-box">
+          <p class="state-title">Không tìm thấy sản phẩm trái cây phù hợp</p>
+          <p class="state-desc">
+            Hãy thử xóa bộ lọc tìm kiếm hoặc thêm mặt hàng trái cây mới vào danh mục.
           </p>
-        </div>
-
-        @if (canManageCatalog()) {
-          <div class="header-actions">
-            <button type="button" class="secondary-btn" (click)="openCategoryModal()">
-              + Thêm danh mục
+          <div class="state-actions">
+            <button type="button" class="secondary-btn" (click)="resetFilters()">
+              Xóa bộ lọc
             </button>
-            <button type="button" class="primary-btn" (click)="openCreateProductModal()">
-              + Thêm sản phẩm mới
-            </button>
-          </div>
-        }
-      </section>
-
-      <!-- CATEGORY PILLS STRIP (FR-B03) -->
-      <section class="categories-strip-card">
-        <div class="strip-header">
-          <span class="strip-label">Danh mục phân loại ({{ categories().length }})</span>
-        </div>
-        <div class="category-pills-wrap">
-          <button
-            type="button"
-            class="cat-pill"
-            [class.active]="selectedCategoryId === ''"
-            (click)="selectedCategoryId = ''; applyFilters()"
-          >
-            Tất cả danh mục
-          </button>
-
-          @for (cat of categories(); track cat.id) {
-            <div class="cat-pill-group" [class.active]="selectedCategoryId === cat.id">
-              <button
-                type="button"
-                class="cat-pill-main"
-                (click)="selectedCategoryId = cat.id; applyFilters()"
-              >
-                {{ cat.name }}
+            @if (canManageCatalog()) {
+              <button type="button" class="primary-btn" (click)="openCreateProductModal()">
+                + Thêm sản phẩm đầu tiên
               </button>
-              @if (canManageCatalog()) {
-                <button
-                  type="button"
-                  class="cat-pill-delete"
-                  title="Xóa danh mục nếu chưa có sản phẩm"
-                  aria-label="Xóa danh mục {{ cat.name }}"
-                  (click)="confirmDeleteCategory(cat)"
-                >
-                  ×
-                </button>
-              }
-            </div>
-          }
-        </div>
-      </section>
-
-      <!-- FILTER BAR NEAR DATA TABLE -->
-      <section class="filter-bar-card">
-        <div class="filter-inputs-grid">
-          <div class="filter-field search-field">
-            <label for="search-sku-input" class="field-label">Tìm kiếm sản phẩm</label>
-            <input
-              id="search-sku-input"
-              type="text"
-              [(ngModel)]="searchQuery"
-              (keyup.enter)="applyFilters()"
-              placeholder="Nhập tên trái cây, mã SKU (VD: XOAI-HL-01) hoặc xuất xứ..."
-              class="text-input"
-            />
-          </div>
-
-          <div class="filter-field">
-            <label for="filter-category-select" class="field-label">Danh mục</label>
-            <select
-              id="filter-category-select"
-              [(ngModel)]="selectedCategoryId"
-              (change)="applyFilters()"
-              class="select-input"
-            >
-              <option value="">Tất cả danh mục</option>
-              @for (cat of categories(); track cat.id) {
-                <option [value]="cat.id">{{ cat.name }}</option>
-              }
-            </select>
-          </div>
-
-          <div class="filter-field">
-            <label for="filter-status-select" class="field-label">Trạng thái kinh doanh</label>
-            <select
-              id="filter-status-select"
-              [(ngModel)]="selectedStatus"
-              (change)="applyFilters()"
-              class="select-input"
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="ACTIVE">Đang kinh doanh</option>
-              <option value="OUT_OF_SEASON">Tạm hết mùa</option>
-              <option value="INACTIVE">Ngừng kinh doanh</option>
-            </select>
-          </div>
-
-          <div class="filter-actions">
-            <button type="button" class="primary-btn" (click)="applyFilters()">
-              Tìm kiếm
-            </button>
-            <button type="button" class="ghost-btn" (click)="resetFilters()">
-              Đặt lại
-            </button>
+            }
           </div>
         </div>
-      </section>
+      }
 
-      <!-- DATA TABLE CARD -->
-      <section class="table-card">
-        <div class="table-card-header">
-          <h2 class="section-title">
-            Danh sách sản phẩm ({{ totalProducts() }} mặt hàng)
-          </h2>
-        </div>
-
-        <!-- TRẠNG THÁI 1: ĐANG TẢI (LOADING) -->
-        @if (isLoading()) {
-          <div class="state-box">
-            <div class="spinner"></div>
-            <p class="state-title">Đang tải danh sách sản phẩm từ Catalog Service...</p>
-          </div>
-        }
-
-        <!-- TRẠNG THÁI 2: LỖI KẾT NỐI (ERROR STATE) -->
-        @if (!isLoading() && loadError()) {
-          <div class="state-box error-state-box" role="alert">
-            <p class="state-title">Chưa tải được dữ liệu sản phẩm</p>
-            <p class="state-desc">{{ loadError() }}</p>
-            <button type="button" class="primary-btn" (click)="loadInitialData()">
-              Thử tải lại
-            </button>
-          </div>
-        }
-
-        <!-- TRẠNG THÁI 3: KHÔNG CÓ DỮ LIỆU (EMPTY STATE) -->
-        @if (!isLoading() && !loadError() && products().length === 0) {
-          <div class="state-box">
-            <p class="state-title">Không tìm thấy sản phẩm trái cây phù hợp</p>
-            <p class="state-desc">
-              Hãy thử xóa bộ lọc tìm kiếm hoặc thêm mặt hàng trái cây mới vào danh mục.
-            </p>
-            <div class="state-actions">
-              <button type="button" class="secondary-btn" (click)="resetFilters()">
-                Xóa bộ lọc
-              </button>
-              @if (canManageCatalog()) {
-                <button type="button" class="primary-btn" (click)="openCreateProductModal()">
-                  + Thêm sản phẩm đầu tiên
-                </button>
-              }
-            </div>
-          </div>
-        }
-
-        <!-- TRẠNG THÁI 4: BẢNG DỮ LIỆU SẢN PHẨM -->
-        @if (!isLoading() && !loadError() && products().length > 0) {
-          <div class="table-responsive">
-            <table class="catalog-table">
-              <thead>
+      @if (!isLoading() && !loadError() && products().length > 0) {
+        <div class="table-responsive">
+          <table class="catalog-table">
+            <thead>
+              <tr>
+                <th>MÃ SKU</th>
+                <th>TÊN SẢN PHẨM & XUẤT XỨ</th>
+                <th>DANH MỤC</th>
+                <th>BẢO QUẢN & HẠN GỢI Ý</th>
+                <th class="text-right">GIÁ BÁN / ĐƠN VỊ</th>
+                <th>TRẠNG THÁI</th>
+                <th class="text-right">THAO TÁC</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (prod of products(); track prod.id) {
                 <tr>
-                  <th>MÃ SKU</th>
-                  <th>TÊN SẢN PHẨM & XUẤT XỨ</th>
-                  <th>DANH MỤC</th>
-                  <th>BẢO QUẢN & HẠN GỢI Ý</th>
-                  <th class="text-right">GIÁ BÁN / ĐƠN VỊ</th>
-                  <th>TRẠNG THÁI</th>
-                  <th class="text-right">THAO TÁC</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (prod of products(); track prod.id) {
-                  <tr>
-                    <td class="sku-cell">
-                      <span class="sku-badge">{{ prod.sku }}</span>
-                    </td>
-                    <td>
-                      <div class="prod-name">{{ prod.name }}</div>
-                      <div class="prod-origin">
-                        Xuất xứ: {{ prod.origin || 'Chưa cập nhật' }}
-                      </div>
-                    </td>
-                    <td>
-                      <span class="cat-tag">{{ prod.category_name || 'Danh mục' }}</span>
-                    </td>
-                    <td>
-                      <div class="storage-line">
-                        {{ formatStorageLabel(prod.storage_condition) }}
-                      </div>
-                      <div class="shelf-life-sub">
-                        Hạn dùng gợi ý: {{ prod.default_shelf_life_days }} ngày
-                      </div>
-                    </td>
-                    <td class="text-right price-cell">
-                      <span class="price-strong">{{ formatVnd(prod.price) }}</span>
-                      <span class="unit-sub">/{{ formatUnitLabel(prod.unit) }}</span>
-                    </td>
-                    <td>
-                      <span
-                        class="status-badge"
-                        [class.status-active]="prod.status === 'ACTIVE'"
-                        [class.status-season]="prod.status === 'OUT_OF_SEASON'"
-                        [class.status-inactive]="prod.status === 'INACTIVE'"
-                      >
-                        <span class="status-dot"></span>
-                        {{ formatStatusLabel(prod.status) }}
-                      </span>
-                    </td>
-                    <td class="text-right actions-cell">
+                  <td class="sku-cell">
+                    <span class="sku-badge">{{ prod.sku }}</span>
+                  </td>
+                  <td>
+                    <div class="prod-name">{{ prod.name }}</div>
+                    <div class="prod-origin">
+                      Xuất xứ: {{ prod.origin || 'Chưa cập nhật' }}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="cat-tag">{{ prod.category_name || 'Danh mục' }}</span>
+                  </td>
+                  <td>
+                    <div class="storage-line">
+                      {{ formatStorageLabel(prod.storage_condition) }}
+                    </div>
+                    <div class="shelf-life-sub">
+                      Hạn dùng gợi ý: {{ prod.default_shelf_life_days }} ngày
+                    </div>
+                  </td>
+                  <td class="text-right price-cell">
+                    <span class="price-strong">{{ formatVnd(prod.price) }}</span>
+                    <span class="unit-sub">/{{ formatUnitLabel(prod.unit) }}</span>
+                  </td>
+                  <td>
+                    <span
+                      class="status-badge"
+                      [class.status-active]="prod.status === 'ACTIVE'"
+                      [class.status-season]="prod.status === 'OUT_OF_SEASON'"
+                      [class.status-inactive]="prod.status === 'INACTIVE'"
+                    >
+                      <span class="status-dot"></span>
+                      {{ formatStatusLabel(prod.status) }}
+                    </span>
+                  </td>
+                  <td class="text-right actions-cell">
+                    <button
+                      type="button"
+                      class="table-action-btn price-btn"
+                      (click)="openPriceModal(prod)"
+                    >
+                      {{ canManageCatalog() ? 'Đổi giá & Lịch sử' : 'Lịch sử giá' }}
+                    </button>
+
+                    @if (canManageCatalog()) {
                       <button
                         type="button"
-                        class="table-action-btn price-btn"
-                        (click)="openPriceModal(prod)"
+                        class="table-action-btn"
+                        (click)="openEditProductModal(prod)"
                       >
-                        {{ canManageCatalog() ? 'Đổi giá & Lịch sử' : 'Lịch sử giá' }}
+                        Sửa
                       </button>
-
-                      @if (canManageCatalog()) {
+                      @if (prod.status !== 'INACTIVE') {
                         <button
                           type="button"
-                          class="table-action-btn"
-                          (click)="openEditProductModal(prod)"
+                          class="table-action-btn danger-link-btn"
+                          (click)="confirmDeactivateProduct(prod)"
                         >
-                          Sửa
+                          Ngừng bán
                         </button>
-                        @if (prod.status !== 'INACTIVE') {
-                          <button
-                            type="button"
-                            class="table-action-btn danger-link-btn"
-                            (click)="confirmDeactivateProduct(prod)"
-                          >
-                            Ngừng bán
-                          </button>
-                        }
                       }
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        }
-      </section>
-    </main>
-  </div>
-</div>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
 
-<!-- ==========================================================================
-     MODAL 1: THÊM DANH MỤC TRÁI CÂY MỚI (FR-B03)
-     ========================================================================== -->
+        <app-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="totalPages()"
+          [totalItems]="totalProducts()"
+          [pageSize]="pageSize()"
+          (pageChange)="loadProducts($event)"
+        ></app-pagination>
+      }
+    </section>
+  </div>
+</app-admin-layout>
+
+<!-- MODAL 1: THÊM DANH MỤC TRÁI CÂY MỚI -->
 @if (showCategoryModal()) {
   <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="cat-modal-title">
     <div class="modal-panel small-modal">
       <div class="modal-header">
         <h3 id="cat-modal-title" class="modal-title">Thêm danh mục trái cây</h3>
-        <button type="button" class="modal-close" (click)="closeCategoryModal()">✕</button>
+        <button type="button" class="modal-close" aria-label="Đóng" (click)="closeCategoryModal()">✕</button>
       </div>
 
       <form (ngSubmit)="submitCreateCategory()" class="modal-body">
-        @if (categoryError()) {
-          <div class="form-error-banner" role="alert">{{ categoryError() }}</div>
-        }
-
         <div class="form-group">
           <label for="cat-name-input" class="field-label">
             Tên danh mục <span class="required-mark">*</span>
@@ -425,14 +301,8 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="ghost-btn" (click)="closeCategoryModal()">
-            Hủy
-          </button>
-          <button
-            type="submit"
-            class="primary-btn"
-            [disabled]="isSavingCategory()"
-          >
+          <button type="button" class="ghost-btn" (click)="closeCategoryModal()">Hủy</button>
+          <button type="submit" class="primary-btn" [disabled]="isSavingCategory()">
             {{ isSavingCategory() ? 'Đang lưu...' : 'Lưu danh mục' }}
           </button>
         </div>
@@ -441,9 +311,7 @@
   </div>
 }
 
-<!-- ==========================================================================
-     MODAL 2: THÊM / SỬA THÔNG TIN SẢN PHẨM TRÁI CÂY (FR-B04, FR-B08)
-     ========================================================================== -->
+<!-- MODAL 2: THÊM / SỬA THÔNG TIN SẢN PHẨM -->
 @if (showProductModal()) {
   <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="prod-modal-title">
     <div class="modal-panel">
@@ -451,14 +319,10 @@
         <h3 id="prod-modal-title" class="modal-title">
           {{ isEditingProduct() ? 'Cập nhật thông tin sản phẩm' : 'Thêm sản phẩm trái cây mới' }}
         </h3>
-        <button type="button" class="modal-close" (click)="closeProductModal()">✕</button>
+        <button type="button" class="modal-close" aria-label="Đóng" (click)="closeProductModal()">✕</button>
       </div>
 
       <form (ngSubmit)="submitProductForm()" class="modal-body">
-        @if (productFormError()) {
-          <div class="form-error-banner" role="alert">{{ productFormError() }}</div>
-        }
-
         <div class="form-row-2">
           <div class="form-group">
             <label for="prod-cat-select" class="field-label">
@@ -516,12 +380,7 @@
             <label for="prod-unit-select" class="field-label">
               Đơn vị bán <span class="required-mark">*</span>
             </label>
-            <select
-              id="prod-unit-select"
-              name="formUnit"
-              [(ngModel)]="formUnit"
-              class="select-input"
-            >
+            <select id="prod-unit-select" name="formUnit" [(ngModel)]="formUnit" class="select-input">
               <option value="kg">Kilogram (kg)</option>
               <option value="hop">Hộp đóng gói (hộp)</option>
               <option value="qua">Theo quả / trái (quả)</option>
@@ -551,12 +410,7 @@
 
           <div class="form-group">
             <label for="prod-status-select" class="field-label">Trạng thái</label>
-            <select
-              id="prod-status-select"
-              name="formStatus"
-              [(ngModel)]="formStatus"
-              class="select-input"
-            >
+            <select id="prod-status-select" name="formStatus" [(ngModel)]="formStatus" class="select-input">
               <option value="ACTIVE">Đang kinh doanh</option>
               <option value="OUT_OF_SEASON">Tạm hết mùa</option>
               <option value="INACTIVE">Ngừng kinh doanh</option>
@@ -620,14 +474,8 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="ghost-btn" (click)="closeProductModal()">
-            Hủy
-          </button>
-          <button
-            type="submit"
-            class="primary-btn"
-            [disabled]="isSavingProduct()"
-          >
+          <button type="button" class="ghost-btn" (click)="closeProductModal()">Hủy</button>
+          <button type="submit" class="primary-btn" [disabled]="isSavingProduct()">
             {{ isSavingProduct() ? 'Đang lưu...' : (isEditingProduct() ? 'Lưu thay đổi' : 'Tạo sản phẩm') }}
           </button>
         </div>
@@ -636,9 +484,7 @@
   </div>
 }
 
-<!-- ==========================================================================
-     MODAL 3: ĐIỀU CHỈNH ĐƠN GIÁ & LỊCH SỬ GIÁ (PRICE HISTORY - FR-B06, BR-07)
-     ========================================================================== -->
+<!-- MODAL 3: ĐIỀU CHỈNH ĐƠN GIÁ & LỊCH SỬ GIÁ -->
 @if (showPriceModal() && selectedProductForPrice(); as prod) {
   <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="price-modal-title">
     <div class="modal-panel">
@@ -652,18 +498,13 @@
             <b class="green-highlight">{{ formatVnd(prod.price) }}/{{ formatUnitLabel(prod.unit) }}</b>
           </span>
         </div>
-        <button type="button" class="modal-close" (click)="closePriceModal()">✕</button>
+        <button type="button" class="modal-close" aria-label="Đóng" (click)="closePriceModal()">✕</button>
       </div>
 
       <div class="modal-body">
-        <!-- Form đổi giá chỉ hiển thị cho Manager / Admin -->
         @if (canManageCatalog()) {
           <form (ngSubmit)="submitPriceUpdate()" class="price-update-box">
             <h4 class="box-title">Cập nhật đơn giá mới (Giao dịch nguyên tử FR-B06)</h4>
-
-            @if (priceModalError()) {
-              <div class="form-error-banner" role="alert">{{ priceModalError() }}</div>
-            }
 
             <div class="form-row-2">
               <div class="form-group">
@@ -699,25 +540,20 @@
             </div>
 
             <div class="price-box-actions">
-              <button
-                type="submit"
-                class="primary-btn"
-                [disabled]="isSavingPrice()"
-              >
+              <button type="submit" class="primary-btn" [disabled]="isSavingPrice()">
                 {{ isSavingPrice() ? 'Đang cập nhật...' : 'Xác nhận đổi giá & Ghi lịch sử' }}
               </button>
             </div>
           </form>
         }
 
-        <!-- Bảng lịch sử thay đổi giá bất biến (PriceHistory) -->
         <div class="history-section">
           <h4 class="box-title">
             Lịch sử thay đổi đơn giá ({{ priceHistoryList().length }} lần ghi nhận)
           </h4>
 
           @if (isLoadingHistory()) {
-            <p class="helper-text">Đang tải lịch sử giá...</p>
+            <app-skeleton-loader variant="history" [rows]="4"></app-skeleton-loader>
           } @else if (priceHistoryList().length === 0) {
             <p class="helper-text">Chưa có bản ghi lịch sử giá nào cho sản phẩm này.</p>
           } @else {
@@ -752,23 +588,19 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="ghost-btn" (click)="closePriceModal()">
-          Đóng
-        </button>
+        <button type="button" class="ghost-btn" (click)="closePriceModal()">Đóng</button>
       </div>
     </div>
   </div>
 }
 
-<!-- ==========================================================================
-     MODAL 4: XÁC NHẬN THAO TÁC QUAN TRỌNG (NGỪNG BÁN / XÓA DANH MỤC)
-     ========================================================================== -->
+<!-- MODAL 4: XÁC NHẬN THAO TÁC QUAN TRỌNG -->
 @if (showConfirmModal()) {
   <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
     <div class="modal-panel small-modal">
       <div class="modal-header">
         <h3 id="confirm-modal-title" class="modal-title">{{ confirmTitle() }}</h3>
-        <button type="button" class="modal-close" (click)="closeConfirmModal()">✕</button>
+        <button type="button" class="modal-close" aria-label="Đóng" (click)="closeConfirmModal()">✕</button>
       </div>
 
       <div class="modal-body">
@@ -776,9 +608,7 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="ghost-btn" (click)="closeConfirmModal()">
-          Hủy bỏ
-        </button>
+        <button type="button" class="ghost-btn" (click)="closeConfirmModal()">Hủy bỏ</button>
         <button
           type="button"
           class="danger-btn"
@@ -791,4 +621,3 @@
     </div>
   </div>
 }
-

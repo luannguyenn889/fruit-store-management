@@ -1,0 +1,137 @@
+<!-- ==========================================================================
+     MODULE: features/profile/customer-profile.component.html
+     NHIỆM VỤ: Giao diện Tài khoản Khách hàng (/profile) - Hồ sơ, Đổi mật khẩu & Đơn hàng.
+     TUÂN THỦ: UI_UX_DESIGN_RULES_FruitStore.md & tương thích selector Cypress 03_users_profile.
+     ========================================================================== -->
+
+<app-storefront-layout>
+  <section class="profile-header-card">
+    <div>
+      <span class="role-chip">{{ authService.getPrimaryRoleLabel() }}</span>
+      <h1 class="page-title">{{ currentUser()?.full_name || 'Tài khoản của tôi' }}</h1>
+      <p class="page-subtitle">{{ currentUser()?.email }}</p>
+    </div>
+    <a routerLink="/shop" class="back-shop-btn">Quay lại cửa hàng</a>
+  </section>
+
+  <div class="profile-grid">
+    <!-- Thông tin cá nhân -->
+    <section class="card-panel">
+      <h2 class="section-title">Thông tin cá nhân</h2>
+      <p class="section-sub">Cập nhật họ tên hiển thị và số điện thoại liên hệ của bạn.</p>
+
+      <form (ngSubmit)="submitProfileUpdate()" class="stack-form">
+        <div class="form-group">
+          <label for="profile-email" class="field-label">Email đăng nhập</label>
+          <input
+            id="profile-email"
+            type="email"
+            [value]="currentUser()?.email || ''"
+            disabled
+            class="text-input"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-name" class="field-label">
+            Họ và tên <span class="required-mark">*</span>
+          </label>
+          <input
+            id="profile-name"
+            type="text"
+            name="profileFullName"
+            [(ngModel)]="profileFullName"
+            placeholder="Nhập họ và tên"
+            class="text-input"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-phone" class="field-label">Số điện thoại</label>
+          <input
+            id="profile-phone"
+            type="text"
+            name="profilePhone"
+            [(ngModel)]="profilePhone"
+            placeholder="0912 345 678"
+            class="text-input"
+          />
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="isSavingProfile()">
+          {{ isSavingProfile() ? 'Đang lưu...' : 'Lưu thông tin' }}
+        </button>
+      </form>
+    </section>
+
+    <!-- Đổi mật khẩu -->
+    <section class="card-panel">
+      <h2 class="section-title">Đổi mật khẩu</h2>
+      <p class="section-sub">Bảo vệ tài khoản bằng mật khẩu có tối thiểu 6 ký tự.</p>
+
+      <form (ngSubmit)="submitChangePassword()" class="stack-form">
+        <div class="form-group">
+          <label for="curr-pwd" class="field-label">Mật khẩu hiện tại</label>
+          <input
+            id="curr-pwd"
+            [type]="showPasswords ? 'text' : 'password'"
+            name="currentPassword"
+            [(ngModel)]="currentPassword"
+            placeholder="Nhập mật khẩu hiện tại"
+            class="text-input"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="new-pwd" class="field-label">Mật khẩu mới</label>
+          <input
+            id="new-pwd"
+            [type]="showPasswords ? 'text' : 'password'"
+            name="newPasswordInput"
+            [(ngModel)]="newPasswordInput"
+            placeholder="Tối thiểu 6 ký tự"
+            class="text-input"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="confirm-pwd" class="field-label">Xác nhận mật khẩu mới</label>
+          <input
+            id="confirm-pwd"
+            [type]="showPasswords ? 'text' : 'password'"
+            name="confirmPasswordInput"
+            [(ngModel)]="confirmPasswordInput"
+            placeholder="Nhập lại mật khẩu mới"
+            class="text-input"
+            required
+          />
+        </div>
+
+        <label for="show-customer-passwords" class="checkbox-inline">
+          <input
+            id="show-customer-passwords"
+            type="checkbox"
+            name="showPasswords"
+            [(ngModel)]="showPasswords"
+          />
+          <span>Hiển thị mật khẩu đang nhập</span>
+        </label>
+
+        <button type="submit" class="btn-primary" [disabled]="isSavingPassword()">
+          {{ isSavingPassword() ? 'Đang cập nhật...' : 'Cập nhật mật khẩu' }}
+        </button>
+      </form>
+    </section>
+  </div>
+
+  <!-- Khối Đơn hàng của tôi (Honest UI) -->
+  <section class="card-panel orders-card">
+    <h2 class="section-title">Đơn hàng của tôi</h2>
+    <p class="section-sub">
+      Lịch sử đơn đặt hàng trực tuyến của bạn sẽ hiển thị tại đây ngay khi dịch vụ Đặt hàng (Order Service) được kích hoạt ở giai đoạn tiếp theo.
+    </p>
+  </section>
+</app-storefront-layout>

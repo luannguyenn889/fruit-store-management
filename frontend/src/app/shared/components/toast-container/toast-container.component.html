@@ -1,0 +1,58 @@
+<!-- ==========================================================================
+     MODULE: shared/components/toast-container/toast-container.component.html
+     NHIỆM VỤ: Khung chứa thông báo Toast toàn cục (Success, Error, Warning, Info).
+     ========================================================================== -->
+
+<div class="toast-viewport" aria-live="polite" aria-atomic="false">
+  @for (toast of toastService.toasts(); track toast.id) {
+    <div
+      class="toast-card"
+      [class.toast-success]="toast.type === 'success'"
+      [class.toast-error]="toast.type === 'error'"
+      [class.toast-warning]="toast.type === 'warning'"
+      [class.toast-info]="toast.type === 'info'"
+      [attr.role]="toast.type === 'error' ? 'alert' : 'status'"
+    >
+      <div class="toast-icon" aria-hidden="true">
+        @if (toast.type === 'success') {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="9 12 11.2 14.2 15.5 9.8"/>
+          </svg>
+        } @else if (toast.type === 'error') {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12.5"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        } @else if (toast.type === 'warning') {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        } @else {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+        }
+      </div>
+
+      <div class="toast-content">
+        <div class="toast-title">{{ toast.title }}</div>
+        <div class="toast-message">{{ toast.message }}</div>
+      </div>
+
+      <button
+        type="button"
+        class="toast-dismiss"
+        (click)="toastService.dismiss(toast.id)"
+        aria-label="Đóng thông báo"
+      >
+        ✕
+      </button>
+    </div>
+  }
+</div>

@@ -1,0 +1,211 @@
+<!-- ==========================================================================
+     MODULE: features/shop/shop.component.html
+     NHIỆM VỤ: Giao diện Cửa hàng trực tuyến (Storefront) dành cho Khách hàng (/shop).
+     TUÂN THỦ: UI_UX_DESIGN_RULES_FruitStore.md (Mobile-first, Honest UI, Design Tokens).
+     ========================================================================== -->
+
+<app-storefront-layout>
+  <!-- Banner đầu trang đơn giản, sạch sẽ, không dùng gradient -->
+  <section class="shop-hero">
+    <div class="hero-copy">
+      <span class="hero-badge">Fresh Orchard Storefront</span>
+      <h1 class="hero-title">Trái cây tươi chọn lọc mỗi ngày</h1>
+      <p class="hero-subtitle">
+        Tra cứu nhanh thông tin nguồn gốc, quy cách đóng gói, điều kiện bảo quản và giá bán niêm yết minh bạch.
+      </p>
+    </div>
+
+    <form (ngSubmit)="applySearch()" class="hero-search-form">
+      <div class="search-box">
+        <span class="search-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <input
+          id="shop-search-input"
+          type="text"
+          name="searchQuery"
+          [(ngModel)]="searchQuery"
+          placeholder="Tìm theo tên trái cây, mã SKU hoặc xuất xứ..."
+          class="search-input"
+        />
+      </div>
+      <button type="submit" class="btn-search">Tìm kiếm</button>
+      @if (searchQuery || selectedCategoryId()) {
+        <button type="button" class="btn-reset" (click)="resetFilters()">Đặt lại</button>
+      }
+    </form>
+  </section>
+
+  <!-- Thanh lọc danh mục trái cây -->
+  <section class="category-bar" aria-label="Lọc theo danh mục trái cây">
+    <button
+      type="button"
+      class="category-pill"
+      [class.active]="selectedCategoryId() === ''"
+      (click)="selectCategory('')"
+    >
+      Tất cả
+    </button>
+    @for (cat of categories(); track cat.id) {
+      <button
+        type="button"
+        class="category-pill"
+        [class.active]="selectedCategoryId() === cat.id"
+        (click)="selectCategory(cat.id)"
+      >
+        {{ cat.name }}
+      </button>
+    }
+  </section>
+
+  <!-- Danh sách sản phẩm trái cây -->
+  <section class="catalog-section">
+    <div class="section-header">
+      <h2 class="section-title">Sản phẩm đang mở bán</h2>
+      @if (!isLoading() && !loadError()) {
+        <span class="result-count">Tìm thấy {{ totalProducts() }} sản phẩm</span>
+      }
+    </div>
+
+    @if (isLoading()) {
+      <app-skeleton-loader variant="kpi" [rows]="4"></app-skeleton-loader>
+    } @else if (loadError()) {
+      <div class="state-card error-card" role="alert">
+        <div class="state-title">Không thể kết nối dữ liệu cửa hàng</div>
+        <p class="state-desc">{{ loadError() }}</p>
+        <button type="button" class="btn-retry" (click)="loadProducts(1)">Thử tải lại</button>
+      </div>
+    } @else if (products().length === 0) {
+      <div class="state-card empty-card">
+        <div class="state-title">Chưa tìm thấy trái cây phù hợp</div>
+        <p class="state-desc">
+          Không có sản phẩm nào khớp với từ khóa hoặc danh mục bạn vừa chọn.
+        </p>
+        <button type="button" class="btn-retry" (click)="resetFilters()">Xem tất cả sản phẩm</button>
+      </div>
+    } @else {
+      <div class="product-grid">
+        @for (p of products(); track p.id) {
+          <article class="product-card">
+            <div class="card-visual">
+              <span class="category-chip">{{ p.category_name || 'Trái cây tươi' }}</span>
+              <div class="visual-emblem" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+                  <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+                </svg>
+              </div>
+              <span class="origin-chip">{{ p.origin || 'Việt Nam' }}</span>
+            </div>
+
+            <div class="card-body">
+              <div class="sku-row">SKU: {{ p.sku }}</div>
+              <h3 class="product-name">{{ p.name }}</h3>
+
+              <div class="meta-tags">
+                <span class="storage-tag">{{ formatStorageLabel(p.storage_condition) }}</span>
+                <span class="shelf-tag">Hạn dùng gợi ý: {{ p.default_shelf_life_days }} ngày</span>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <div class="price-block">
+                <span class="price-value">{{ formatVnd(p.price) }}</span>
+                <span class="price-unit">/ {{ formatUnitLabel(p.unit) }}</span>
+              </div>
+              <button
+                type="button"
+                class="btn-detail"
+                (click)="openProductDetail(p)"
+              >
+                Xem chi tiết
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+
+      <div class="pagination-wrap">
+        <app-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="totalPages()"
+          [totalItems]="totalProducts()"
+          [pageSize]="pageSize()"
+          (pageChange)="loadProducts($event)"
+        ></app-pagination>
+      </div>
+    }
+  </section>
+</app-storefront-layout>
+
+<!-- Modal Chi tiết Sản phẩm -->
+@if (selectedProduct(); as prod) {
+  <div class="modal-backdrop" (click)="closeProductDetail()">
+    <div
+      class="modal-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="shop-product-modal-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-header">
+        <div>
+          <span class="modal-cat">{{ prod.category_name || 'Trái cây tươi' }}</span>
+          <h2 id="shop-product-modal-title" class="modal-title">{{ prod.name }}</h2>
+        </div>
+        <button
+          type="button"
+          class="modal-close-btn"
+          (click)="closeProductDetail()"
+          aria-label="Đóng chi tiết sản phẩm"
+        >
+          ×
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-price-banner">
+          <span class="modal-price">{{ formatVnd(prod.price) }}</span>
+          <span class="modal-unit">/ {{ formatUnitLabel(prod.unit) }}</span>
+        </div>
+
+        <dl class="spec-grid">
+          <div class="spec-item">
+            <dt>Mã sản phẩm (SKU)</dt>
+            <dd>{{ prod.sku }}</dd>
+          </div>
+          <div class="spec-item">
+            <dt>Xuất xứ</dt>
+            <dd>{{ prod.origin || 'Việt Nam' }}</dd>
+          </div>
+          <div class="spec-item">
+            <dt>Điều kiện bảo quản</dt>
+            <dd>{{ formatStorageLabel(prod.storage_condition) }}</dd>
+          </div>
+          <div class="spec-item">
+            <dt>Hạn sử dụng gợi ý</dt>
+            <dd>{{ prod.default_shelf_life_days }} ngày</dd>
+          </div>
+        </dl>
+
+        <div class="desc-block">
+          <div class="desc-label">Mô tả sản phẩm</div>
+          <p class="desc-text">
+            {{ prod.description || 'Trái cây tươi tuyển chọn đạt tiêu chuẩn chất lượng Fresh Orchard.' }}
+          </p>
+        </div>
+
+        <div class="upcoming-notice">
+          Tính năng Giỏ hàng và Đặt hàng trực tuyến đang được hoàn thiện ở giai đoạn tiếp theo.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-close-modal" (click)="closeProductDetail()">Đóng</button>
+      </div>
+    </div>
+  </div>
+}

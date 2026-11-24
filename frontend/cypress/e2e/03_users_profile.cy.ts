@@ -1,13 +1,14 @@
 /**
  * Module: cypress/e2e/03_users_profile.cy.ts
- * Nhiệm vụ: Kiểm thử E2E chức năng Hồ sơ cá nhân (`PATCH /auth/me`) và Đổi mật khẩu
- *           (`POST /auth/change-password`) tại `/users` (FR-A04).
+ * Nhiệm vụ: Kiểm thử E2E chức năng Hồ sơ cá nhân (`PATCH /auth/me`), Đổi mật khẩu
+ *           (`POST /auth/change-password`) tại `/profile` (FR-A04) và `roleGuard` chặn `CUSTOMER`
+ *           truy cập khu vực quản trị (`/dashboard`, `/catalog`, `/users`).
  *           Sử dụng tài khoản tạo riêng cho phiên test để không ảnh hưởng tài khoản mẫu.
  */
 
 import { TEST_CONFIG } from '../support/constants';
 
-describe('FR-A04 - Hồ sơ cá nhân & Đổi mật khẩu (/users)', () => {
+describe('FR-A04 - Hồ sơ cá nhân & Đổi mật khẩu (/profile)', () => {
   const uniqueEmail = `e2e_profile_${Date.now()}@fruitstore.com`;
   const initialPassword = 'Profile@123';
   const updatedPassword = 'NewProfile@456';
@@ -27,7 +28,7 @@ describe('FR-A04 - Hồ sơ cá nhân & Đổi mật khẩu (/users)', () => {
   it('TC_FR-A04_01: Cập nhật họ tên và số điện thoại cá nhân thành công và giữ nguyên sau F5', () => {
     const uniquePhone = `09${String(Date.now()).slice(-8)}`;
     cy.loginByApi(uniqueEmail, initialPassword);
-    cy.visit('/users');
+    cy.visit('/profile');
 
     // Tài khoản CUSTOMER tự mở tab Hồ sơ cá nhân
     cy.get('#profile-name').clear().type('Khách Hàng Đã Cập Nhật');
@@ -42,7 +43,7 @@ describe('FR-A04 - Hồ sơ cá nhân & Đổi mật khẩu (/users)', () => {
 
   it('TC_FR-A04_02: Cập nhật họ tên dưới 2 ký tự hiển thị lỗi validation', () => {
     cy.loginByApi(uniqueEmail, initialPassword);
-    cy.visit('/users');
+    cy.visit('/profile');
 
     cy.get('#profile-name').clear().type('A');
     cy.contains('button', 'Lưu thông tin').click();
@@ -51,7 +52,7 @@ describe('FR-A04 - Hồ sơ cá nhân & Đổi mật khẩu (/users)', () => {
 
   it('TC_FR-A04_03: Đổi mật khẩu với mật khẩu hiện tại không đúng (400)', () => {
     cy.loginByApi(uniqueEmail, initialPassword);
-    cy.visit('/users');
+    cy.visit('/profile');
 
     cy.get('#curr-pwd').type('SaiMatKhauCu@1');
     cy.get('#new-pwd').type(updatedPassword);
@@ -63,7 +64,7 @@ describe('FR-A04 - Hồ sơ cá nhân & Đổi mật khẩu (/users)', () => {
 
   it('TC_FR-A04_04: Đổi mật khẩu khi mật khẩu xác nhận không khớp', () => {
     cy.loginByApi(uniqueEmail, initialPassword);
-    cy.visit('/users');
+    cy.visit('/profile');
 
     cy.get('#curr-pwd').type(initialPassword);
     cy.get('#new-pwd').type(updatedPassword);
@@ -75,7 +76,7 @@ describe('FR-A04 - Hồ sơ cá nhân & Đổi mật khẩu (/users)', () => {
 
   it('TC_FR-A04_05: Đổi mật khẩu thành công và đăng nhập lại bằng mật khẩu mới', () => {
     cy.loginByApi(uniqueEmail, initialPassword);
-    cy.visit('/users');
+    cy.visit('/profile');
 
     cy.get('#curr-pwd').type(initialPassword);
     cy.get('#new-pwd').type(updatedPassword);
@@ -88,6 +89,21 @@ describe('FR-A04 - Hồ sơ cá nhân & Đổi mật khẩu (/users)', () => {
     cy.get('button.logout-icon-btn').click();
     cy.url().should('include', '/login');
     cy.loginByUi(uniqueEmail, updatedPassword);
-    cy.url({ timeout: 15000 }).should('include', '/dashboard');
+    cy.url({ timeout: 15000 }).should('include', '/shop');
+  });
+
+  it('TC_FR-A04_06: Tài khoản CUSTOMER bị roleGuard chuyển hướng về /shop khi vào khu vực quản trị', () => {
+    cy.loginByApi(uniqueEmail, updatedPassword);
+
+    cy.visit('/dashboard');
+    cy.url({ timeout: 15000 }).should('include', '/shop');
+
+    cy.visit('/catalog');
+    cy.url({ timeout: 15000 }).should('include', '/shop');
+
+    cy.visit('/users');
+    cy.url({ timeout: 15000 }).should('include', '/shop');
+
+    cy.contains('h1', 'Trái cây tươi chọn lọc mỗi ngày').should('be.visible');
   });
 });

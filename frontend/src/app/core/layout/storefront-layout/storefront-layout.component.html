@@ -1,0 +1,149 @@
+<!-- ==========================================================================
+     MODULE: core/layout/storefront-layout/storefront-layout.component.html
+     NHIỆM VỤ: Khung Header + Nội dung + Footer dùng chung cho Storefront Khách hàng.
+     TUÂN THỦ: UI_UX_DESIGN_RULES_FruitStore.md (Mục 4.2 & Mục 8 Responsive).
+     ========================================================================== -->
+
+<div class="storefront-shell">
+  <header class="sf-header">
+    <div class="sf-header-inner">
+      <div class="sf-left">
+        <a routerLink="/shop" class="sf-brand" (click)="closeMobileMenu()">
+          <span class="sf-brand-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+              <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+            </svg>
+          </span>
+          <span class="sf-brand-text">
+            <span class="sf-brand-name">Fresh Orchard</span>
+            <span class="sf-brand-sub">Trái cây tươi chuẩn nguồn gốc</span>
+          </span>
+        </a>
+
+        <nav class="sf-nav desktop-nav" aria-label="Điều hướng cửa hàng">
+          <a
+            routerLink="/shop"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="sf-nav-link"
+          >
+            Cửa hàng
+          </a>
+          @if (isLoggedIn()) {
+            <a
+              routerLink="/profile"
+              routerLinkActive="active"
+              class="sf-nav-link"
+            >
+              Tài khoản của tôi
+            </a>
+          }
+          @if (isInternalUser()) {
+            <a
+              routerLink="/dashboard"
+              class="sf-nav-link sf-admin-entry"
+            >
+              Trang quản trị
+            </a>
+          }
+        </nav>
+      </div>
+
+      <div class="sf-right">
+        @if (isLoggedIn()) {
+          <div class="sf-user-box">
+            <a routerLink="/profile" class="sf-user-meta" (click)="closeMobileMenu()">
+              <span class="sf-user-name">{{ currentUser()?.full_name || 'Khách hàng' }}</span>
+              <span class="sf-user-role">{{ authService.getPrimaryRoleLabel() }}</span>
+            </a>
+            <button
+              type="button"
+              class="logout-icon-btn"
+              (click)="logout()"
+              title="Đăng xuất khỏi hệ thống"
+              aria-label="Đăng xuất khỏi hệ thống"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
+          </div>
+        } @else {
+          <div class="sf-auth-actions desktop-auth">
+            <a routerLink="/login" class="sf-btn-outline">Đăng nhập</a>
+            <a routerLink="/register" class="sf-btn-primary">Đăng ký</a>
+          </div>
+        }
+
+        <button
+          type="button"
+          class="sf-mobile-toggle"
+          (click)="toggleMobileMenu()"
+          [attr.aria-expanded]="isMobileMenuOpen()"
+          aria-label="Mở menu cửa hàng"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    @if (isMobileMenuOpen()) {
+      <div class="sf-mobile-drawer">
+        <nav class="sf-mobile-nav" aria-label="Menu di động">
+          <a
+            routerLink="/shop"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="closeMobileMenu()"
+            class="sf-mobile-link"
+          >
+            Cửa hàng
+          </a>
+          @if (isLoggedIn()) {
+            <a
+              routerLink="/profile"
+              routerLinkActive="active"
+              (click)="closeMobileMenu()"
+              class="sf-mobile-link"
+            >
+              Tài khoản của tôi
+            </a>
+          }
+          @if (isInternalUser()) {
+            <a
+              routerLink="/dashboard"
+              (click)="closeMobileMenu()"
+              class="sf-mobile-link sf-admin-entry"
+            >
+              Trang quản trị
+            </a>
+          }
+          @if (!isLoggedIn()) {
+            <div class="sf-mobile-auth">
+              <a routerLink="/login" (click)="closeMobileMenu()" class="sf-btn-outline">Đăng nhập</a>
+              <a routerLink="/register" (click)="closeMobileMenu()" class="sf-btn-primary">Đăng ký</a>
+            </div>
+          }
+        </nav>
+      </div>
+    }
+  </header>
+
+  <main class="sf-main">
+    <ng-content></ng-content>
+  </main>
+
+  <footer class="sf-footer">
+    <div class="sf-footer-inner">
+      <span>© 2024 Fresh Orchard — Hệ thống trái cây tươi chuẩn nguồn gốc</span>
+      <span class="sf-footer-note">Sản phẩm &amp; giá bán cập nhật trực tiếp từ Catalog Service</span>
+    </div>
+  </footer>
+</div>

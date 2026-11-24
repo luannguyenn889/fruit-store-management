@@ -1,10 +1,8 @@
 /**
  * Module: features/dashboard/dashboard.component.ts
  * Nhiệm vụ: Màn hình Tổng quan Quản trị Cửa hàng (Admin/Manager Dashboard).
- *           Tuân thủ nguyên tắc Honest UI trong `UI_UX_DESIGN_RULES_FruitStore.md`:
- *           - Chỉ hiển thị số liệu thật lấy từ Backend (hiện tại là `CatalogService` và `AuthService`).
- *           - Các khối dữ liệu thuộc `Inventory`, `Order`, `Reporting` (chưa triển khai)
- *             hiển thị trạng thái trung thực "Chưa có dữ liệu", tuyệt đối không bịa số giả.
+ *           Bọc trong khung `AdminLayoutComponent` dùng chung, chỉ hiển thị số liệu thật
+ *           từ `CatalogService` & `AuthService` (Honest UI) kèm Skeleton Loading.
  */
 
 import { Component, OnInit, computed, signal } from '@angular/core';
@@ -16,18 +14,17 @@ import {
   Category,
   Product
 } from '../../core/services/catalog.service';
+import { AdminLayoutComponent } from '../../core/layout/admin-layout/admin-layout.component';
+import { SkeletonLoaderComponent } from '../../shared/components/skeleton-loader/skeleton-loader.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, AdminLayoutComponent, SkeletonLoaderComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
-  activeTab = signal<'today' | 'week' | 'month'>('today');
-  chartMetric = signal<'revenue' | 'volume'>('revenue');
-
   currentUser = signal<User | null>(null);
   todayLabel = new Date().toLocaleDateString('vi-VN', {
     day: '2-digit',
@@ -72,7 +69,7 @@ export class DashboardComponent implements OnInit {
     this.catalogService.getCategories().subscribe({
       next: cats => this.categories.set(cats),
       error: () => {
-        // Lỗi chung sẽ hiển thị tại khối tải sản phẩm
+        // Lỗi chung được hiển thị tại khối sản phẩm
       }
     });
 
@@ -89,14 +86,6 @@ export class DashboardComponent implements OnInit {
         );
       }
     });
-  }
-
-  setTab(tab: 'today' | 'week' | 'month'): void {
-    this.activeTab.set(tab);
-  }
-
-  setChartMetric(metric: 'revenue' | 'volume'): void {
-    this.chartMetric.set(metric);
   }
 
   /** Định dạng số tiền sang chuẩn VNĐ, ví dụ `65.000 ₫` */
@@ -118,9 +107,5 @@ export class DashboardComponent implements OnInit {
       default:
         return unit;
     }
-  }
-
-  logout(): void {
-    this.authService.logout();
   }
 }

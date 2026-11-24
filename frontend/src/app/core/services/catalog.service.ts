@@ -10,6 +10,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthService } from './auth.service';
+import { environment } from '../../../environments/environment';
 
 export type ProductUnit = 'kg' | 'hop' | 'qua';
 export type StorageCondition = 'AMBIENT' | 'COOL_2_8C' | 'COOL_8_12C';
@@ -109,7 +110,7 @@ export interface ProductFilterParams {
   providedIn: 'root'
 })
 export class CatalogService {
-  private readonly apiUrl = 'http://localhost:8000/api/v1/catalog';
+  private readonly apiUrl = `${environment.apiBaseUrl}/catalog`;
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 

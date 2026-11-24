@@ -1,0 +1,60 @@
+<!-- ==========================================================================
+     MODULE: shared/components/skeleton-loader/skeleton-loader.component.html
+     NHIỆM VỤ: Hiển thị khung xương tải dữ liệu (Skeleton Loading) theo từng loại
+               giao diện: bảng dữ liệu, thẻ KPI, danh sách xem nhanh, bảng lịch sử giá.
+     ========================================================================== -->
+
+<div class="skeleton-root" aria-busy="true" aria-label="Đang tải dữ liệu">
+  @if (variant === 'kpi') {
+    <div class="skeleton-kpi">
+      <div class="sk-bar sk-kpi-value"></div>
+      <div class="sk-bar sk-kpi-sub"></div>
+    </div>
+  } @else if (variant === 'list') {
+    <div class="skeleton-list">
+      @for (r of rowIndices; track r) {
+        <div class="sk-list-row">
+          <div class="sk-list-left">
+            <div class="sk-bar sk-title"></div>
+            <div class="sk-bar sk-meta"></div>
+          </div>
+          <div class="sk-list-right">
+            <div class="sk-bar sk-price"></div>
+            <div class="sk-bar sk-status"></div>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (variant === 'history') {
+    <div class="skeleton-table">
+      @for (r of rowIndices; track r) {
+        <div class="sk-history-row">
+          <div class="sk-bar sk-w-25"></div>
+          <div class="sk-bar sk-w-20"></div>
+          <div class="sk-bar sk-w-20"></div>
+          <div class="sk-bar sk-w-35"></div>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="skeleton-table">
+      <div class="sk-table-head">
+        @for (c of colIndices; track c) {
+          <div class="sk-bar sk-head-cell"></div>
+        }
+      </div>
+      @for (r of rowIndices; track r) {
+        <div class="sk-table-row">
+          @for (c of colIndices; track c) {
+            <div class="sk-cell">
+              <div class="sk-bar" [class.sk-short]="c === 0 || c === colIndices.length - 1"></div>
+              @if (c === 1) {
+                <div class="sk-bar sk-subline"></div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
