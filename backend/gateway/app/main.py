@@ -86,6 +86,8 @@ def is_public_route(method: str, path: str) -> bool:
         or normalized_path.startswith("/api/v1/catalog/")
     ):
         return True
+    if upper_method == "GET" and normalized_path == "/api/v1/inventory/health":
+        return True
     return False
 
 
@@ -253,6 +255,7 @@ async def gateway_health(request: Request) -> JSONResponse:
             "upstreams": {
                 "auth_service": settings.AUTH_SERVICE_URL,
                 "catalog_service": settings.CATALOG_SERVICE_URL,
+                "inventory_service": settings.INVENTORY_SERVICE_URL,
             },
         },
     )
@@ -287,5 +290,20 @@ async def proxy_catalog(path: str, request: Request) -> Response:  # noqa: ARG00
         request=request,
         upstream_base_url=settings.CATALOG_SERVICE_URL,
         service_label="catalog-service",
+    )
+
+
+@app.api_route(
+    "/api/v1/inventory/{path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    tags=["Inventory Proxy"],
+    summary="Chuyển tiếp các yêu cầu kho & lô FEFO sang Inventory Service (:8003)",
+)
+async def proxy_inventory(path: str, request: Request) -> Response:  # noqa: ARG001
+    """Định tuyến mọi request `/api/v1/inventory/*` sang `inventory-service`."""
+    return await forward_request(
+        request=request,
+        upstream_base_url=settings.INVENTORY_SERVICE_URL,
+        service_label="inventory-service",
     )
 
