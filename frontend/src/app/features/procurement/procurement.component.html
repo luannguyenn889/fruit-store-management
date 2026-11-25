@@ -1,0 +1,719 @@
+<!-- ==========================================================================
+     MODULE: features/procurement/procurement.component.html
+     NHIỆM VỤ: Giao diện Quản lý Nhà cung cấp & Nhập hàng NCC (`/procurement`).
+     TUÂN THỦ: Bọc `app-admin-layout`, dùng token `var(--*)`, Skeleton Loading,
+               Pagination, ToastService, không `alert()`, không dữ liệu giả.
+     ========================================================================== -->
+
+<app-admin-layout sectionTitle="Quản lý kho & sản phẩm" pageTitle="Nhập hàng NCC">
+  <div class="procurement-content">
+    <!-- HEADER -->
+    <section class="page-header-row">
+      <div>
+        <h1 class="page-title">Nhà cung cấp & Nhập hàng NCC</h1>
+        <p class="page-subtitle">
+          Quản lý hồ sơ nhà cung cấp trái cây, lập phiếu nhập hàng theo cân lẻ (kg) và xác nhận nhập kho sinh lô FEFO.
+        </p>
+      </div>
+
+      @if (canManageProcurement()) {
+        <div class="header-actions">
+          @if (activeTab() === 'suppliers') {
+            <button type="button" class="primary-btn" (click)="openCreateSupplierModal()">
+              + Thêm nhà cung cấp
+            </button>
+          } @else {
+            <button type="button" class="primary-btn" (click)="openCreatePOModal()">
+              + Lập phiếu nhập mới
+            </button>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- HAI TAB CHÍNH (4.7) -->
+    <nav class="tabs-bar" aria-label="Phân hệ nhập hàng">
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'purchase-orders'"
+        (click)="switchTab('purchase-orders')"
+      >
+        Phiếu nhập kho ({{ totalPOs() }})
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'suppliers'"
+        (click)="switchTab('suppliers')"
+      >
+        Nhà cung cấp ({{ totalSuppliers() }})
+      </button>
+    </nav>
+
+    <!-- ===================================================================
+         TAB 1: PHIẾU NHẬP KHO (PURCHASE ORDERS)
+         =================================================================== -->
+    @if (activeTab() === 'purchase-orders') {
+      <section class="filter-bar-card">
+        <div class="filter-inputs-grid po-filter-grid">
+          <div class="filter-field">
+            <label for="po-status-filter" class="field-label">Trạng thái phiếu</label>
+            <select
+              id="po-status-filter"
+              [(ngModel)]="poStatusFilter"
+              (change)="applyPOFilters()"
+              class="select-input"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="DRAFT">Phiếu nháp (DRAFT)</option>
+              <option value="RECEIVED">Đã nhập kho (RECEIVED)</option>
+              <option value="CANCELLED">Đã hủy (CANCELLED)</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label for="po-supplier-filter" class="field-label">Nhà cung cấp</label>
+            <select
+              id="po-supplier-filter"
+              [(ngModel)]="poSupplierFilter"
+              (change)="applyPOFilters()"
+              class="select-input"
+            >
+              <option value="">Tất cả nhà cung cấp</option>
+              @for (sup of activeSuppliers(); track sup.id) {
+                <option [value]="sup.id">{{ sup.code }} - {{ sup.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label for="po-from-date" class="field-label">Từ ngày</label>
+            <input id="po-from-date" type="date" [(ngModel)]="poFromDate" class="text-input" />
+          </div>
+
+          <div class="filter-field">
+            <label for="po-to-date" class="field-label">Đến ngày</label>
+            <input id="po-to-date" type="date" [(ngModel)]="poToDate" class="text-input" />
+          </div>
+
+          <div class="filter-actions">
+            <button type="button" class="primary-btn" (click)="applyPOFilters()">Lọc</button>
+            <button type="button" class="ghost-btn" (click)="resetPOFilters()">Đặt lại</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="table-card">
+        <div class="table-card-header">
+          <h2 class="section-title">Danh sách phiếu nhập hàng</h2>
+        </div>
+
+        @if (isLoadingPOs()) {
+          <app-skeleton-loader variant="table" [rows]="6" [columns]="7"></app-skeleton-loader>
+        }
+
+        @if (!isLoadingPOs() && poError()) {
+          <div class="state-box error-state-box" role="alert">
+            <p class="state-title">Chưa tải được danh sách phiếu nhập</p>
+            <p class="state-desc">{{ poError() }}</p>
+            <button type="button" class="primary-btn" (click)="loadPurchaseOrders(poPage())">
+              Thử tải lại
+            </button>
+          </div>
+        }
+
+        @if (!isLoadingPOs() && !poError() && purchaseOrders().length === 0) {
+          <div class="state-box">
+            <p class="state-title">Chưa có phiếu nhập kho nào</p>
+            <p class="state-desc">
+              Hãy lập phiếu nhập mới từ nhà cung cấp để chuẩn bị nhập hàng vào kho FEFO.
+            </p>
+            @if (canManageProcurement()) {
+              <button type="button" class="primary-btn" (click)="openCreatePOModal()">
+                + Lập phiếu nhập đầu tiên
+              </button>
+            }
+          </div>
+        }
+
+        @if (!isLoadingPOs() && !poError() && purchaseOrders().length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>MÃ PHIẾU</th>
+                  <th>NHÀ CUNG CẤP</th>
+                  <th>NGÀY TẠO</th>
+                  <th>NGÀY NHẬP KHO</th>
+                  <th class="text-right">SỐ DÒNG</th>
+                  <th class="text-right">TỔNG TIỀN</th>
+                  <th>TRẠNG THÁI</th>
+                  <th class="text-right">THAO TÁC</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (po of purchaseOrders(); track po.id) {
+                  <tr>
+                    <td>
+                      <span class="code-badge">{{ po.po_number }}</span>
+                    </td>
+                    <td>
+                      <div class="cell-primary">{{ po.supplier_name || 'Nhà cung cấp' }}</div>
+                      @if (po.supplier_code) {
+                        <div class="cell-sub">{{ po.supplier_code }}</div>
+                      }
+                    </td>
+                    <td>{{ po.created_at | date: 'dd/MM/yyyy HH:mm' }}</td>
+                    <td>{{ po.received_at ? (po.received_at | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
+                    <td class="text-right num-cell">{{ po.items.length }}</td>
+                    <td class="text-right num-cell strong-num">{{ formatVnd(po.total_amount) }}</td>
+                    <td>
+                      <span
+                        class="status-badge"
+                        [class.status-draft]="po.status === 'DRAFT'"
+                        [class.status-received]="po.status === 'RECEIVED'"
+                        [class.status-cancelled]="po.status === 'CANCELLED'"
+                      >
+                        <span class="status-dot"></span>
+                        {{ formatPOStatusLabel(po.status) }}
+                      </span>
+                    </td>
+                    <td class="text-right actions-cell">
+                      <button
+                        type="button"
+                        class="table-action-btn"
+                        (click)="openPODetailModal(po)"
+                      >
+                        Chi tiết
+                      </button>
+
+                      @if (canManageProcurement() && po.status === 'DRAFT') {
+                        <button
+                          type="button"
+                          class="table-action-btn confirm-link-btn"
+                          (click)="openReceiveConfirm(po)"
+                        >
+                          Xác nhận nhập kho
+                        </button>
+                        <button
+                          type="button"
+                          class="table-action-btn danger-link-btn"
+                          (click)="openCancelConfirm(po)"
+                        >
+                          Hủy
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <app-pagination
+            [currentPage]="poPage()"
+            [totalPages]="poTotalPages()"
+            [totalItems]="totalPOs()"
+            [pageSize]="poPageSize()"
+            (pageChange)="loadPurchaseOrders($event)"
+          ></app-pagination>
+        }
+      </section>
+    }
+
+    <!-- ===================================================================
+         TAB 2: NHÀ CUNG CẤP (SUPPLIERS)
+         =================================================================== -->
+    @if (activeTab() === 'suppliers') {
+      <section class="filter-bar-card">
+        <div class="filter-inputs-grid supplier-filter-grid">
+          <div class="filter-field">
+            <label for="sup-search-input" class="field-label">Tìm nhà cung cấp</label>
+            <input
+              id="sup-search-input"
+              type="text"
+              [(ngModel)]="supplierSearchQuery"
+              (keyup.enter)="applySupplierFilters()"
+              placeholder="Nhập tên NCC, số điện thoại hoặc mã NCC-..."
+              class="text-input"
+            />
+          </div>
+
+          <div class="filter-field">
+            <label for="sup-active-filter" class="field-label">Trạng thái hợp tác</label>
+            <select
+              id="sup-active-filter"
+              [(ngModel)]="supplierActiveFilter"
+              (change)="applySupplierFilters()"
+              class="select-input"
+            >
+              <option value="">Tất cả</option>
+              <option value="true">Đang hợp tác</option>
+              <option value="false">Tạm ngừng</option>
+            </select>
+          </div>
+
+          <div class="filter-actions">
+            <button type="button" class="primary-btn" (click)="applySupplierFilters()">
+              Tìm kiếm
+            </button>
+            <button type="button" class="ghost-btn" (click)="resetSupplierFilters()">
+              Đặt lại
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="table-card">
+        <div class="table-card-header">
+          <h2 class="section-title">Danh sách nhà cung cấp</h2>
+        </div>
+
+        @if (isLoadingSuppliers()) {
+          <app-skeleton-loader variant="table" [rows]="6" [columns]="6"></app-skeleton-loader>
+        }
+
+        @if (!isLoadingSuppliers() && suppliersError()) {
+          <div class="state-box error-state-box" role="alert">
+            <p class="state-title">Chưa tải được danh sách nhà cung cấp</p>
+            <p class="state-desc">{{ suppliersError() }}</p>
+            <button type="button" class="primary-btn" (click)="loadSuppliers(suppliersPage())">
+              Thử tải lại
+            </button>
+          </div>
+        }
+
+        @if (!isLoadingSuppliers() && !suppliersError() && suppliers().length === 0) {
+          <div class="state-box">
+            <p class="state-title">Không tìm thấy nhà cung cấp phù hợp</p>
+            <p class="state-desc">Hãy thử xóa bộ lọc hoặc thêm nhà cung cấp mới.</p>
+            <div class="state-actions">
+              <button type="button" class="secondary-btn" (click)="resetSupplierFilters()">
+                Đặt lại bộ lọc
+              </button>
+              @if (canManageProcurement()) {
+                <button type="button" class="primary-btn" (click)="openCreateSupplierModal()">
+                  + Thêm nhà cung cấp
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        @if (!isLoadingSuppliers() && !suppliersError() && suppliers().length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>MÃ NCC</th>
+                  <th>TÊN NHÀ CUNG CẤP</th>
+                  <th>SỐ ĐIỆN THOẠI</th>
+                  <th>ĐỊA CHỈ</th>
+                  <th>TRẠNG THÁI</th>
+                  @if (canManageProcurement()) {
+                    <th class="text-right">THAO TÁC</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (sup of suppliers(); track sup.id) {
+                  <tr>
+                    <td>
+                      <span class="code-badge">{{ sup.code }}</span>
+                    </td>
+                    <td class="cell-primary">{{ sup.name }}</td>
+                    <td>{{ sup.phone || '—' }}</td>
+                    <td>{{ sup.address || '—' }}</td>
+                    <td>
+                      <span
+                        class="status-badge"
+                        [class.status-received]="sup.is_active"
+                        [class.status-cancelled]="!sup.is_active"
+                      >
+                        <span class="status-dot"></span>
+                        {{ sup.is_active ? 'Đang hợp tác' : 'Tạm ngừng' }}
+                      </span>
+                    </td>
+                    @if (canManageProcurement()) {
+                      <td class="text-right actions-cell">
+                        <button
+                          type="button"
+                          class="table-action-btn"
+                          (click)="openEditSupplierModal(sup)"
+                        >
+                          Sửa
+                        </button>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <app-pagination
+            [currentPage]="suppliersPage()"
+            [totalPages]="suppliersTotalPages()"
+            [totalItems]="totalSuppliers()"
+            [pageSize]="suppliersPageSize()"
+            (pageChange)="loadSuppliers($event)"
+          ></app-pagination>
+        }
+      </section>
+    }
+  </div>
+</app-admin-layout>
+
+<!-- =========================================================================
+     MODAL 1: THÊM / SỬA NHÀ CUNG CẤP
+     ========================================================================= -->
+@if (showSupplierModal()) {
+  <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="sup-modal-title">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 id="sup-modal-title" class="modal-title">
+          {{ isEditingSupplier() ? 'Cập nhật nhà cung cấp' : 'Thêm nhà cung cấp mới' }}
+        </h3>
+        <button type="button" class="modal-close" aria-label="Đóng" (click)="closeSupplierModal()">
+          ✕
+        </button>
+      </div>
+
+      <form (ngSubmit)="submitSupplier()" class="modal-body">
+        <div class="form-group">
+          <label for="sup-code-input" class="field-label">
+            Mã nhà cung cấp (định dạng NCC-xxx, để trống để tự sinh)
+          </label>
+          <input
+            id="sup-code-input"
+            type="text"
+            name="formSupplierCode"
+            [(ngModel)]="formSupplierCode"
+            placeholder="Ví dụ: NCC-001"
+            class="text-input"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sup-name-input" class="field-label">
+            Tên nhà cung cấp <span class="required-mark">*</span>
+          </label>
+          <input
+            id="sup-name-input"
+            type="text"
+            name="formSupplierName"
+            [(ngModel)]="formSupplierName"
+            placeholder="Ví dụ: Vườn Xoài Cát Hòa Lộc Tiền Giang"
+            class="text-input"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sup-phone-input" class="field-label">Số điện thoại liên hệ</label>
+          <input
+            id="sup-phone-input"
+            type="text"
+            name="formSupplierPhone"
+            [(ngModel)]="formSupplierPhone"
+            placeholder="Ví dụ: 0901234567"
+            class="text-input"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sup-address-input" class="field-label">Địa chỉ</label>
+          <textarea
+            id="sup-address-input"
+            name="formSupplierAddress"
+            [(ngModel)]="formSupplierAddress"
+            rows="2"
+            placeholder="Địa chỉ vườn / kho giao nhận..."
+            class="textarea-input"
+          ></textarea>
+        </div>
+
+        <label class="checkbox-row">
+          <input
+            type="checkbox"
+            name="formSupplierActive"
+            [(ngModel)]="formSupplierActive"
+          />
+          <span>Đang hợp tác cung ứng hàng</span>
+        </label>
+
+        <div class="modal-footer">
+          <button type="button" class="ghost-btn" (click)="closeSupplierModal()">Hủy</button>
+          <button type="submit" class="primary-btn" [disabled]="isSavingSupplier()">
+            {{ isSavingSupplier() ? 'Đang lưu...' : 'Lưu nhà cung cấp' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- =========================================================================
+     MODAL 2: LẬP PHIẾU NHẬP KHO MỚI (NHIỀU DÒNG SẢN PHẨM)
+     ========================================================================= -->
+@if (showCreatePOModal()) {
+  <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="po-create-title">
+    <div class="modal-panel large-modal">
+      <div class="modal-header">
+        <h3 id="po-create-title" class="modal-title">Lập phiếu nhập kho mới (Trạng thái Nháp)</h3>
+        <button type="button" class="modal-close" aria-label="Đóng" (click)="closeCreatePOModal()">
+          ✕
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="po-supplier-select" class="field-label">
+            Nhà cung cấp <span class="required-mark">*</span>
+          </label>
+          <select
+            id="po-supplier-select"
+            [(ngModel)]="poSupplierId"
+            class="select-input"
+          >
+            <option value="">-- Chọn nhà cung cấp --</option>
+            @for (sup of activeSuppliers(); track sup.id) {
+              <option [value]="sup.id">{{ sup.code }} - {{ sup.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="po-lines-header">
+          <span class="field-label">Danh sách sản phẩm nhập kho ({{ poLines.length }} dòng)</span>
+          <button type="button" class="secondary-btn compact-btn" (click)="addPOLine()">
+            + Thêm dòng sản phẩm
+          </button>
+        </div>
+
+        <div class="po-lines-list">
+          @for (line of poLines; track $index; let idx = $index) {
+            <div class="po-line-row">
+              <div class="line-field line-product">
+                <label class="field-label">Sản phẩm <span class="required-mark">*</span></label>
+                <select
+                  [(ngModel)]="line.product_id"
+                  (change)="onProductLineChange(idx)"
+                  class="select-input"
+                >
+                  <option value="">-- Chọn sản phẩm --</option>
+                  @for (prod of products(); track prod.id) {
+                    <option [value]="prod.id">{{ prod.name }} ({{ prod.sku }})</option>
+                  }
+                </select>
+              </div>
+
+              <div class="line-field">
+                <label class="field-label">SL đặt (kg) <span class="required-mark">*</span></label>
+                <input
+                  type="number"
+                  min="0.001"
+                  step="0.001"
+                  [(ngModel)]="line.quantity_ordered"
+                  class="text-input"
+                />
+              </div>
+
+              <div class="line-field">
+                <label class="field-label">Giá vốn (đ) <span class="required-mark">*</span></label>
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  [(ngModel)]="line.unit_cost"
+                  class="text-input"
+                />
+              </div>
+
+              <div class="line-field">
+                <label class="field-label">HSD dự kiến</label>
+                <input
+                  type="date"
+                  [(ngModel)]="line.expected_expiry_date"
+                  class="text-input"
+                />
+              </div>
+
+              <div class="line-field line-total-col">
+                <span class="field-label">Thành tiền</span>
+                <div class="line-total-val">{{ formatVnd(computeLineTotal(line)) }}</div>
+              </div>
+
+              <div class="line-remove-col">
+                <button
+                  type="button"
+                  class="ghost-btn compact-btn"
+                  title="Xóa dòng"
+                  (click)="removePOLine(idx)"
+                >
+                  Xóa
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="po-grand-total-bar">
+          <span>Tổng giá trị phiếu nhập dự kiến:</span>
+          <strong>{{ formatVnd(computePOGrandTotal()) }}</strong>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="ghost-btn" (click)="closeCreatePOModal()">Hủy</button>
+          <button
+            type="button"
+            class="primary-btn"
+            [disabled]="isSavingPO()"
+            (click)="submitCreatePO()"
+          >
+            {{ isSavingPO() ? 'Đang tạo phiếu...' : 'Lưu phiếu nhập nháp' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- =========================================================================
+     MODAL 3: CHI TIẾT PHIẾU NHẬP KHO
+     ========================================================================= -->
+@if (showPODetailModal() && selectedPO(); as po) {
+  <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="po-detail-title">
+    <div class="modal-panel large-modal">
+      <div class="modal-header">
+        <h3 id="po-detail-title" class="modal-title">
+          Chi tiết phiếu nhập {{ po.po_number }}
+        </h3>
+        <button type="button" class="modal-close" aria-label="Đóng" (click)="closePODetailModal()">
+          ✕
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="po-meta-grid">
+          <div><strong>Nhà cung cấp:</strong> {{ po.supplier_name || po.supplier_code || '—' }}</div>
+          <div><strong>Trạng thái:</strong> {{ formatPOStatusLabel(po.status) }}</div>
+          <div><strong>Ngày lập:</strong> {{ po.created_at | date: 'dd/MM/yyyy HH:mm' }}</div>
+          <div>
+            <strong>Ngày nhập kho:</strong>
+            {{ po.received_at ? (po.received_at | date: 'dd/MM/yyyy HH:mm') : 'Chưa nhập kho' }}
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>SẢN PHẨM</th>
+                <th class="text-right">SL ĐẶT</th>
+                <th class="text-right">SL THỰC NHẬN</th>
+                <th class="text-right">ĐƠN GIÁ VỐN</th>
+                <th>HSD DỰ KIẾN</th>
+                <th class="text-right">THÀNH TIỀN</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of po.items; track item.id) {
+                <tr>
+                  <td>{{ getProductName(item.product_id) }}</td>
+                  <td class="text-right num-cell">{{ formatQty(item.quantity_ordered) }}</td>
+                  <td class="text-right num-cell">{{ formatQty(item.quantity_received) }}</td>
+                  <td class="text-right num-cell">{{ formatVnd(item.unit_cost) }}</td>
+                  <td>{{ item.expected_expiry_date || '—' }}</td>
+                  <td class="text-right num-cell strong-num">{{ formatVnd(item.line_total) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="po-grand-total-bar">
+          <span>Tổng cộng:</span>
+          <strong>{{ formatVnd(po.total_amount) }}</strong>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="ghost-btn" (click)="closePODetailModal()">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- =========================================================================
+     MODAL 4: XÁC NHẬN NHẬP KHO / HỦY PHIẾU
+     ========================================================================= -->
+@if (showConfirmModal() && confirmTargetPO(); as target) {
+  <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="po-confirm-title">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 id="po-confirm-title" class="modal-title">
+          {{
+            confirmAction() === 'receive'
+              ? 'Xác nhận nhập kho & sinh lô FEFO'
+              : 'Xác nhận hủy phiếu nhập nháp'
+          }}
+        </h3>
+        <button type="button" class="modal-close" aria-label="Đóng" (click)="closeConfirmModal()">
+          ✕
+        </button>
+      </div>
+
+      <div class="modal-body">
+        @if (confirmAction() === 'receive') {
+          <p class="confirm-text">
+            Chốt phiếu <strong>{{ target.po_number }}</strong> của nhà cung cấp
+            <strong>{{ target.supplier_name || target.supplier_code }}</strong>
+            với tổng giá trị <strong>{{ formatVnd(target.total_amount) }}</strong>?
+            Hệ thống sẽ tạo <strong>{{ target.items.length }} lô hàng FEFO</strong> và ghi sổ cái nhập kho (IN).
+          </p>
+
+          <div class="form-group">
+            <label for="confirm-received-date" class="field-label">Ngày nhập kho thực tế</label>
+            <input
+              id="confirm-received-date"
+              type="date"
+              [(ngModel)]="confirmReceivedDate"
+              class="text-input"
+            />
+          </div>
+        } @else {
+          <p class="confirm-text">
+            Bạn có chắc chắn muốn hủy phiếu nhập nháp <strong>{{ target.po_number }}</strong>?
+            Thao tác này không thể hoàn tác.
+          </p>
+        }
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="ghost-btn"
+            [disabled]="isProcessingConfirm()"
+            (click)="closeConfirmModal()"
+          >
+            Quay lại
+          </button>
+          <button
+            type="button"
+            [class]="confirmAction() === 'receive' ? 'primary-btn' : 'danger-btn'"
+            [disabled]="isProcessingConfirm()"
+            (click)="executeConfirmAction()"
+          >
+            {{
+              isProcessingConfirm()
+                ? 'Đang xử lý...'
+                : confirmAction() === 'receive'
+                  ? 'Xác nhận nhập kho'
+                  : 'Xác nhận hủy phiếu'
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
