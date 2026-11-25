@@ -1,0 +1,712 @@
+<!-- ==========================================================================
+     MODULE: features/inventory/inventory.component.html
+     NHIỆM VỤ: Giao diện Tồn kho & Lô hàng FEFO (`/inventory`).
+     TUÂN THỦ: Bọc `app-admin-layout`, dùng token `var(--*)`, nhãn chữ + màu rõ ràng,
+               Skeleton Loading, Pagination, ToastService, không `alert()`.
+     ========================================================================== -->
+
+<app-admin-layout sectionTitle="Quản lý kho & sản phẩm" pageTitle="Tồn kho & Lô hàng FEFO">
+  <div class="inventory-content">
+    <!-- HEADER -->
+    <section class="page-header-row">
+      <div>
+        <h1 class="page-title">Tồn kho & Quản lý Lô hàng FEFO</h1>
+        <p class="page-subtitle">
+          Theo dõi tồn khả dụng theo sản phẩm, ưu tiên xuất lô cận hạn (FEFO), kiểm soát sổ cái biến động và ghi nhận hao hụt.
+        </p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="secondary-btn" (click)="refreshAll()">
+          Làm mới dữ liệu
+        </button>
+      </div>
+    </section>
+
+    <!-- KPI TỔNG QUAN TỒN KHO -->
+    @if (stockSummary(); as summary) {
+      <section class="kpi-grid" aria-label="Tổng quan tồn kho">
+        <article class="kpi-card">
+          <div class="kpi-label">Sản phẩm đang có lô</div>
+          <div class="kpi-value">{{ summary.total_products }}</div>
+          <div class="kpi-sub">Mặt hàng được theo dõi</div>
+        </article>
+        <article class="kpi-card kpi-available">
+          <div class="kpi-label">Tổng tồn khả dụng</div>
+          <div class="kpi-value">{{ formatQty(summary.total_available_quantity) }}</div>
+          <div class="kpi-sub">Loại trừ lô hết hạn & đang giữ</div>
+        </article>
+        <article class="kpi-card kpi-reserved">
+          <div class="kpi-label">Đang giữ cho đơn</div>
+          <div class="kpi-value">{{ formatQty(summary.total_reserved_quantity) }}</div>
+          <div class="kpi-sub">Chờ xác nhận xuất kho</div>
+        </article>
+        <article class="kpi-card">
+          <div class="kpi-label">Tổng thực tế còn lại</div>
+          <div class="kpi-value">{{ formatQty(summary.total_remaining_quantity) }}</div>
+          <div class="kpi-sub">Tính trên tất cả các lô</div>
+        </article>
+      </section>
+    }
+
+    <!-- CẢNH BÁO HẠN DÙNG (4.3) -->
+    @if (expiringData(); as exp) {
+      @if (exp.total_near_expiry > 0 || exp.total_expired > 0) {
+        <section class="expiry-alert-banner" role="status">
+          <div class="alert-text-group">
+            <span class="alert-badge-pill">Cảnh báo hạn dùng FEFO</span>
+            <span>
+              Hiện có
+              <strong>{{ exp.total_near_expiry }} lô cận hạn</strong> (≤ {{ exp.days_threshold }} ngày)
+              @if (exp.total_expired > 0) {
+                và <strong class="expired-text-strong">{{ exp.total_expired }} lô đã hết hạn</strong>
+              }
+              cần ưu tiên xử lý.
+            </span>
+          </div>
+          <div class="alert-actions">
+            @if (exp.total_near_expiry > 0) {
+              <button
+                type="button"
+                class="ghost-btn compact-btn"
+                (click)="switchTab('lots'); filterExpiry = 'NEAR_EXPIRY_3D'; applyLotFilters()"
+              >
+                Xem lô cận hạn
+              </button>
+            }
+            @if (exp.total_expired > 0) {
+              <button
+                type="button"
+                class="ghost-btn compact-btn"
+                (click)="switchTab('lots'); filterExpiry = 'EXPIRED_ONLY'; applyLotFilters()"
+              >
+                Xem lô hết hạn
+              </button>
+            }
+          </div>
+        </section>
+      }
+    }
+
+    <!-- THANH CHUYỂN TAB -->
+    <nav class="tabs-bar" aria-label="Phân hệ tồn kho">
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'lots'"
+        (click)="switchTab('lots')"
+      >
+        Danh sách Lô hàng FEFO ({{ totalLots() }})
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'summary'"
+        (click)="switchTab('summary')"
+      >
+        Tồn kho theo Sản phẩm ({{ stockSummary()?.products?.length ?? 0 }})
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'movements'"
+        (click)="switchTab('movements')"
+      >
+        Sổ cái biến động (Chỉ đọc)
+      </button>
+    </nav>
+
+    <!-- ===================================================================
+         TAB 1: DANH SÁCH LÔ HÀNG FEFO
+         =================================================================== -->
+    @if (activeTab() === 'lots') {
+      <section class="filter-bar-card">
+        <div class="filter-inputs-grid">
+          <div class="filter-field">
+            <label for="lot-product-filter" class="field-label">Sản phẩm</label>
+            <select
+              id="lot-product-filter"
+              [(ngModel)]="filterProductId"
+              (change)="applyLotFilters()"
+              class="select-input"
+            >
+              <option value="">Tất cả sản phẩm</option>
+              @for (prod of products(); track prod.id) {
+                <option [value]="prod.id">{{ prod.name }} ({{ prod.sku }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label for="lot-status-filter" class="field-label">Trạng thái lô</label>
+            <select
+              id="lot-status-filter"
+              [(ngModel)]="filterStatus"
+              (change)="applyLotFilters()"
+              class="select-input"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="AVAILABLE">Còn hạn (Khả dụng)</option>
+              <option value="NEAR_EXPIRY">Cận hạn</option>
+              <option value="EXPIRED">Đã hết hạn</option>
+              <option value="DEPLETED">Đã hết hàng</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label for="lot-expiry-filter" class="field-label">Lọc nhanh hạn dùng</label>
+            <select
+              id="lot-expiry-filter"
+              [(ngModel)]="filterExpiry"
+              (change)="applyLotFilters()"
+              class="select-input"
+            >
+              <option value="">Tất cả hạn dùng</option>
+              <option value="NEAR_EXPIRY_3D">Sắp hết hạn (≤ 3 ngày)</option>
+              <option value="EXPIRED_ONLY">Đã quá hạn sử dụng</option>
+            </select>
+          </div>
+
+          <div class="filter-actions">
+            <button type="button" class="primary-btn" (click)="applyLotFilters()">
+              Áp dụng
+            </button>
+            <button type="button" class="ghost-btn" (click)="resetLotFilters()">
+              Đặt lại
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="table-card">
+        <div class="table-card-header">
+          <h2 class="section-title">Lô hàng theo thứ tự hết hạn gần nhất (FEFO)</h2>
+        </div>
+
+        @if (isLoadingLots()) {
+          <app-skeleton-loader variant="table" [rows]="6" [columns]="8"></app-skeleton-loader>
+        }
+
+        @if (!isLoadingLots() && lotsError()) {
+          <div class="state-box error-state-box" role="alert">
+            <p class="state-title">Chưa tải được danh sách lô hàng</p>
+            <p class="state-desc">{{ lotsError() }}</p>
+            <button type="button" class="primary-btn" (click)="loadLots(lotsPage())">
+              Thử tải lại
+            </button>
+          </div>
+        }
+
+        @if (!isLoadingLots() && !lotsError() && lots().length === 0) {
+          <div class="state-box">
+            <p class="state-title">Không có lô hàng nào phù hợp bộ lọc</p>
+            <p class="state-desc">
+              Hãy đặt lại bộ lọc hoặc lập và xác nhận phiếu nhập kho từ Nhà cung cấp để sinh lô mới.
+            </p>
+            <button type="button" class="secondary-btn" (click)="resetLotFilters()">
+              Đặt lại bộ lọc
+            </button>
+          </div>
+        }
+
+        @if (!isLoadingLots() && !lotsError() && lots().length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>MÃ LÔ</th>
+                  <th>SẢN PHẨM</th>
+                  <th>NGÀY NHẬP</th>
+                  <th>HẠN SỬ DỤNG</th>
+                  <th class="text-right">SL NHẬP</th>
+                  <th class="text-right">SL CÒN</th>
+                  <th class="text-right">ĐANG GIỮ</th>
+                  <th class="text-right">KHẢ DỤNG</th>
+                  <th>TRẠNG THÁI</th>
+                  @if (canWriteInventory()) {
+                    <th class="text-right">THAO TÁC</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (lot of lots(); track lot.id) {
+                  <tr [class.row-expired]="lot.status === 'EXPIRED'">
+                    <td>
+                      <span class="code-badge">{{ lot.lot_code }}</span>
+                    </td>
+                    <td>
+                      <div class="cell-primary">{{ getProductName(lot.product_id) }}</div>
+                      @if (getProductSku(lot.product_id)) {
+                        <div class="cell-sub">SKU: {{ getProductSku(lot.product_id) }}</div>
+                      }
+                    </td>
+                    <td>{{ lot.received_date }}</td>
+                    <td>
+                      <div class="cell-primary">{{ lot.expiry_date }}</div>
+                      <div
+                        class="expiry-countdown"
+                        [class.text-warning]="lot.status === 'NEAR_EXPIRY'"
+                        [class.text-danger]="lot.is_expired || lot.status === 'EXPIRED'"
+                      >
+                        {{ formatExpiryCountdown(lot) }}
+                      </div>
+                    </td>
+                    <td class="text-right num-cell">
+                      {{ formatQty(lot.quantity_received) }} {{ getProductUnit(lot.product_id) }}
+                    </td>
+                    <td class="text-right num-cell">
+                      {{ formatQty(lot.quantity_remaining) }} {{ getProductUnit(lot.product_id) }}
+                    </td>
+                    <td class="text-right num-cell">
+                      {{ formatQty(lot.quantity_reserved) }}
+                    </td>
+                    <td class="text-right num-cell strong-num">
+                      {{ formatQty(lot.available_quantity) }}
+                    </td>
+                    <td>
+                      <span
+                        class="status-badge"
+                        [class.status-available]="lot.status === 'AVAILABLE'"
+                        [class.status-near-expiry]="lot.status === 'NEAR_EXPIRY'"
+                        [class.status-expired]="lot.status === 'EXPIRED'"
+                        [class.status-depleted]="lot.status === 'DEPLETED'"
+                      >
+                        <span class="status-dot"></span>
+                        {{ formatLotStatusLabel(lot.status) }}
+                      </span>
+                    </td>
+                    @if (canWriteInventory()) {
+                      <td class="text-right actions-cell">
+                        @if (lot.status !== 'DEPLETED') {
+                          <button
+                            type="button"
+                            class="table-action-btn danger-link-btn"
+                            (click)="openLotActionModal(lot, 'wastage')"
+                          >
+                            Hao hụt
+                          </button>
+                          <button
+                            type="button"
+                            class="table-action-btn"
+                            (click)="openLotActionModal(lot, 'adjust')"
+                          >
+                            Điều chỉnh
+                          </button>
+                        } @else {
+                          <span class="muted-text">Đã hết lô</span>
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <app-pagination
+            [currentPage]="lotsPage()"
+            [totalPages]="lotsTotalPages()"
+            [totalItems]="totalLots()"
+            [pageSize]="lotsPageSize()"
+            (pageChange)="loadLots($event)"
+          ></app-pagination>
+        }
+      </section>
+    }
+
+    <!-- ===================================================================
+         TAB 2: BẢNG TỒN KHO THEO SẢN PHẨM
+         =================================================================== -->
+    @if (activeTab() === 'summary') {
+      <section class="table-card">
+        <div class="table-card-header">
+          <h2 class="section-title">Tổng hợp tồn khả dụng theo sản phẩm (Không tính lô hết hạn)</h2>
+        </div>
+
+        @if (isLoadingSummary()) {
+          <app-skeleton-loader variant="table" [rows]="5" [columns]="7"></app-skeleton-loader>
+        }
+
+        @if (!isLoadingSummary() && summaryError()) {
+          <div class="state-box error-state-box" role="alert">
+            <p class="state-title">Chưa tải được bảng tổng hợp tồn kho</p>
+            <p class="state-desc">{{ summaryError() }}</p>
+            <button type="button" class="primary-btn" (click)="loadStockSummary()">
+              Thử tải lại
+            </button>
+          </div>
+        }
+
+        @if (!isLoadingSummary() && !summaryError() && (stockSummary()?.products?.length ?? 0) === 0) {
+          <div class="state-box">
+            <p class="state-title">Chưa có dữ liệu tồn kho</p>
+            <p class="state-desc">Hãy xác nhận phiếu nhập hàng để tạo lô tồn kho đầu tiên.</p>
+          </div>
+        }
+
+        @if (!isLoadingSummary() && !summaryError() && (stockSummary()?.products?.length ?? 0) > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>SẢN PHẨM</th>
+                  <th class="text-right">TỔNG ĐÃ NHẬP</th>
+                  <th class="text-right">TỔNG CÒN LẠI</th>
+                  <th class="text-right">ĐANG GIỮ</th>
+                  <th class="text-right">TỒN KHẢ DỤNG</th>
+                  <th>TÌNH TRẠNG LÔ</th>
+                  <th class="text-right">CHI TIẾT</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of stockSummary()!.products; track item.product_id) {
+                  <tr>
+                    <td>
+                      <div class="cell-primary">{{ getProductName(item.product_id) }}</div>
+                      @if (getProductSku(item.product_id)) {
+                        <div class="cell-sub">SKU: {{ getProductSku(item.product_id) }}</div>
+                      }
+                    </td>
+                    <td class="text-right num-cell">
+                      {{ formatQty(item.total_received) }} {{ getProductUnit(item.product_id) }}
+                    </td>
+                    <td class="text-right num-cell">
+                      {{ formatQty(item.total_remaining) }} {{ getProductUnit(item.product_id) }}
+                    </td>
+                    <td class="text-right num-cell">
+                      {{ formatQty(item.total_reserved) }}
+                    </td>
+                    <td class="text-right num-cell strong-num text-brand">
+                      {{ formatQty(item.available_quantity) }} {{ getProductUnit(item.product_id) }}
+                    </td>
+                    <td>
+                      <div class="lot-counts-wrap">
+                        <span class="mini-pill pill-ok">{{ item.active_lots_count }} khả dụng</span>
+                        @if (item.near_expiry_lots_count > 0) {
+                          <span class="mini-pill pill-warn">{{ item.near_expiry_lots_count }} cận hạn</span>
+                        }
+                        @if (item.expired_lots_count > 0) {
+                          <span class="mini-pill pill-danger">{{ item.expired_lots_count }} hết hạn</span>
+                        }
+                      </div>
+                    </td>
+                    <td class="text-right">
+                      <button
+                        type="button"
+                        class="table-action-btn"
+                        (click)="filterProductId = item.product_id; switchTab('lots'); applyLotFilters()"
+                      >
+                        Xem các lô
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+
+    <!-- ===================================================================
+         TAB 3: SỔ CÁI BIẾN ĐỘNG KHO (CHỈ ĐỌC)
+         =================================================================== -->
+    @if (activeTab() === 'movements') {
+      <section class="filter-bar-card">
+        <div class="filter-inputs-grid movements-filter-grid">
+          <div class="filter-field">
+            <label for="mov-product-filter" class="field-label">Sản phẩm</label>
+            <select
+              id="mov-product-filter"
+              [(ngModel)]="movementProductId"
+              (change)="applyMovementFilters()"
+              class="select-input"
+            >
+              <option value="">Tất cả sản phẩm</option>
+              @for (prod of products(); track prod.id) {
+                <option [value]="prod.id">{{ prod.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label for="mov-type-filter" class="field-label">Loại biến động</label>
+            <select
+              id="mov-type-filter"
+              [(ngModel)]="movementType"
+              (change)="applyMovementFilters()"
+              class="select-input"
+            >
+              <option value="">Tất cả loại</option>
+              <option value="IN">Nhập kho (IN)</option>
+              <option value="SALE_OUT">Xuất bán (SALE_OUT)</option>
+              <option value="RESERVE">Giữ hàng (RESERVE)</option>
+              <option value="RELEASE">Hoàn giữ (RELEASE)</option>
+              <option value="WASTE_EXPIRED">Hao hụt hết hạn</option>
+              <option value="WASTE_DAMAGED">Hao hụt hư hỏng</option>
+              <option value="ADJUSTMENT">Điều chỉnh kiểm kê</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label for="mov-from-date" class="field-label">Từ ngày</label>
+            <input
+              id="mov-from-date"
+              type="date"
+              [(ngModel)]="movementFromDate"
+              class="text-input"
+            />
+          </div>
+
+          <div class="filter-field">
+            <label for="mov-to-date" class="field-label">Đến ngày</label>
+            <input
+              id="mov-to-date"
+              type="date"
+              [(ngModel)]="movementToDate"
+              class="text-input"
+            />
+          </div>
+
+          <div class="filter-actions">
+            <button type="button" class="primary-btn" (click)="applyMovementFilters()">
+              Lọc
+            </button>
+            <button type="button" class="ghost-btn" (click)="resetMovementFilters()">
+              Đặt lại
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="table-card">
+        <div class="table-card-header">
+          <h2 class="section-title">Sổ cái biến động tồn kho (Bất biến - Chỉ đọc)</h2>
+        </div>
+
+        @if (isLoadingMovements()) {
+          <app-skeleton-loader variant="table" [rows]="6" [columns]="6"></app-skeleton-loader>
+        }
+
+        @if (!isLoadingMovements() && movementsError()) {
+          <div class="state-box error-state-box" role="alert">
+            <p class="state-title">Chưa tải được sổ cái biến động</p>
+            <p class="state-desc">{{ movementsError() }}</p>
+            <button type="button" class="primary-btn" (click)="loadMovements(movementsPage())">
+              Thử tải lại
+            </button>
+          </div>
+        }
+
+        @if (!isLoadingMovements() && !movementsError() && movements().length === 0) {
+          <div class="state-box">
+            <p class="state-title">Chưa có phát sinh biến động kho phù hợp</p>
+            <p class="state-desc">Hãy thử mở rộng khoảng ngày hoặc xóa bộ lọc.</p>
+          </div>
+        }
+
+        @if (!isLoadingMovements() && !movementsError() && movements().length > 0) {
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>THỜI GIAN</th>
+                  <th>LOẠI BIẾN ĐỘNG</th>
+                  <th class="text-right">THAY ĐỔI SL</th>
+                  <th class="text-right">GIÁ VỐN LÚC GHI</th>
+                  <th>THAM CHIẾU</th>
+                  <th>LÝ DO / GHI CHÚ</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (mov of movements(); track mov.id) {
+                  <tr>
+                    <td>{{ mov.created_at | date: 'dd/MM/yyyy HH:mm' }}</td>
+                    <td>
+                      <span class="movement-badge">{{ formatMovementTypeLabel(mov.movement_type) }}</span>
+                    </td>
+                    <td
+                      class="text-right num-cell strong-num"
+                      [class.text-brand]="isPositiveMovement(mov.quantity_change)"
+                      [class.text-danger]="!isPositiveMovement(mov.quantity_change)"
+                    >
+                      {{ isPositiveMovement(mov.quantity_change) ? '+' : '' }}{{ formatQty(mov.quantity_change) }}
+                    </td>
+                    <td class="text-right num-cell">{{ formatVnd(mov.unit_cost_snapshot) }}</td>
+                    <td>
+                      <span class="cell-sub">{{ mov.reference_type || 'LOT' }}</span>
+                    </td>
+                    <td>{{ mov.reason || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <app-pagination
+            [currentPage]="movementsPage()"
+            [totalPages]="movementsTotalPages()"
+            [totalItems]="totalMovements()"
+            [pageSize]="movementsPageSize()"
+            (pageChange)="loadMovements($event)"
+          ></app-pagination>
+        }
+      </section>
+    }
+  </div>
+</app-admin-layout>
+
+<!-- =========================================================================
+     MODAL GHI NHẬN HAO HỤT / ĐIỀU CHỈNH KIỂM KÊ (CÓ BƯỚC XÁC NHẬN)
+     ========================================================================= -->
+@if (showLotActionModal() && selectedLot(); as lot) {
+  <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="lot-action-title">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 id="lot-action-title" class="modal-title">
+          {{
+            lotActionMode() === 'wastage'
+              ? 'Ghi nhận hao hụt lô hàng'
+              : 'Điều chỉnh tồn kho kiểm kê'
+          }}
+        </h3>
+        <button type="button" class="modal-close" aria-label="Đóng" (click)="closeLotActionModal()">
+          ✕
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="lot-summary-box">
+          <div>
+            <strong>Mã lô:</strong> <span class="code-badge">{{ lot.lot_code }}</span>
+          </div>
+          <div><strong>Sản phẩm:</strong> {{ getProductName(lot.product_id) }}</div>
+          <div>
+            <strong>Tồn còn:</strong> {{ formatQty(lot.quantity_remaining) }} |
+            <strong>Đang giữ:</strong> {{ formatQty(lot.quantity_reserved) }} |
+            <strong>Khả dụng:</strong> {{ formatQty(lot.available_quantity) }}
+          </div>
+        </div>
+
+        @if (!confirmStep()) {
+          @if (lotActionMode() === 'wastage') {
+            <div class="form-group">
+              <label for="wastage-qty-input" class="field-label">
+                Số lượng hao hụt ({{ getProductUnit(lot.product_id) }}) <span class="required-mark">*</span>
+              </label>
+              <input
+                id="wastage-qty-input"
+                type="number"
+                min="0.001"
+                step="0.001"
+                [(ngModel)]="wastageQuantity"
+                placeholder="Nhập số lượng > 0 (VD: 2.5)"
+                class="text-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="wastage-reason-select" class="field-label">
+                Lý do hao hụt <span class="required-mark">*</span>
+              </label>
+              <select
+                id="wastage-reason-select"
+                [(ngModel)]="wastageReasonType"
+                class="select-input"
+              >
+                <option value="WASTE_DAMAGED">Hư hỏng / Dập nát (WASTE_DAMAGED)</option>
+                <option value="WASTE_EXPIRED">Hết hạn sử dụng (WASTE_EXPIRED)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="wastage-note-input" class="field-label">
+                Ghi chú chi tiết <span class="required-mark">*</span>
+              </label>
+              <textarea
+                id="wastage-note-input"
+                rows="3"
+                [(ngModel)]="wastageNote"
+                placeholder="Mô tả nguyên nhân, tình trạng thực tế khi hủy lô..."
+                class="textarea-input"
+              ></textarea>
+            </div>
+          } @else {
+            <div class="form-group">
+              <label for="adjust-qty-input" class="field-label">
+                Số lượng thực tế sau kiểm kê ({{ getProductUnit(lot.product_id) }})
+                <span class="required-mark">*</span>
+              </label>
+              <input
+                id="adjust-qty-input"
+                type="number"
+                min="0"
+                step="0.001"
+                [(ngModel)]="adjustActualQuantity"
+                placeholder="Nhập số lượng >= 0"
+                class="text-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="adjust-reason-input" class="field-label">
+                Lý do điều chỉnh kiểm kê <span class="required-mark">*</span>
+              </label>
+              <textarea
+                id="adjust-reason-input"
+                rows="3"
+                [(ngModel)]="adjustReason"
+                placeholder="Ví dụ: Kiểm kê cuối ngày lệch cân nặng thực tế..."
+                class="textarea-input"
+              ></textarea>
+            </div>
+          }
+
+          <div class="modal-footer">
+            <button type="button" class="ghost-btn" (click)="closeLotActionModal()">Hủy</button>
+            <button type="button" class="primary-btn" (click)="proceedToConfirmStep()">
+              Tiếp tục xác nhận
+            </button>
+          </div>
+        } @else {
+          <div class="confirm-box" role="alert">
+            <p class="confirm-title">Xác nhận ghi vào sổ cái bất biến?</p>
+            @if (lotActionMode() === 'wastage') {
+              <p class="confirm-desc">
+                Bạn sắp ghi nhận hao hụt <strong>{{ wastageQuantity }} {{ getProductUnit(lot.product_id) }}</strong>
+                cho lô <strong>{{ lot.lot_code }}</strong> với lý do
+                <strong>{{ wastageReasonType === 'WASTE_EXPIRED' ? 'Hết hạn sử dụng' : 'Hư hỏng / Dập nát' }}</strong>.
+              </p>
+              <p class="confirm-desc">Ghi chú: "{{ wastageNote.trim() }}"</p>
+            } @else {
+              <p class="confirm-desc">
+                Bạn sắp điều chỉnh tồn còn lại của lô <strong>{{ lot.lot_code }}</strong>
+                từ <strong>{{ formatQty(lot.quantity_remaining) }}</strong> thành
+                <strong>{{ adjustActualQuantity }} {{ getProductUnit(lot.product_id) }}</strong>.
+              </p>
+              <p class="confirm-desc">Lý do: "{{ adjustReason.trim() }}"</p>
+            }
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="ghost-btn"
+              [disabled]="isSubmittingAction()"
+              (click)="backToEditStep()"
+            >
+              Quay lại sửa
+            </button>
+            <button
+              type="button"
+              [class]="lotActionMode() === 'wastage' ? 'danger-btn' : 'primary-btn'"
+              [disabled]="isSubmittingAction()"
+              (click)="submitLotAction()"
+            >
+              {{ isSubmittingAction() ? 'Đang lưu...' : 'Xác nhận lưu' }}
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
