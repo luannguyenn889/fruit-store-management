@@ -46,11 +46,11 @@ async def request_id_middleware(request: Request, call_next) -> Response:
     return response
 
 
-try:
-    from app.api.v1.lots import router as lots_router
-    app.include_router(lots_router, prefix=settings.API_V1_STR)
-except ImportError:
-    pass
+from app.api.v1.lots import router as lots_router
+from app.api.v1.procurement import router as procurement_router
+
+app.include_router(procurement_router, prefix=settings.API_V1_STR)
+app.include_router(lots_router, prefix=settings.API_V1_STR)
 
 
 async def _check_db_health(session: AsyncSession) -> dict:
