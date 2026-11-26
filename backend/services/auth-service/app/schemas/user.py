@@ -169,3 +169,56 @@ class MessageResponse(BaseModel):
     """Schema phản hồi thông điệp xác nhận thao tác thành công."""
 
     message: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Schema yêu cầu gửi liên kết đặt lại mật khẩu qua Email (FR-A10)."""
+
+    email: EmailStr = Field(..., description="Email đã đăng ký tài khoản")
+
+
+class ResetPasswordRequest(BaseModel):
+    """Schema đặt lại mật khẩu mới bằng token từ Email (FR-A10)."""
+
+    token: str = Field(..., min_length=10, description="Token đặt lại mật khẩu")
+    new_password: str = Field(
+        ..., min_length=6, max_length=100, description="Mật khẩu mới tối thiểu 6 ký tự"
+    )
+
+
+class AuditLogResponse(BaseModel):
+    """Schema một bản ghi nhật ký kiểm toán Auth Service (FR-H01, NFR-S11)."""
+
+    id: UUID
+    actor_user_id: Optional[UUID] = None
+    target_user_id: Optional[UUID] = None
+    action: str
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    request_id: Optional[str] = None
+    ip_address: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedAuditLogsResponse(BaseModel):
+    """Schema danh sách nhật ký Audit Log có phân trang."""
+
+    items: List[AuditLogResponse]
+    total: int
+    page: int
+    size: int
+    pages: int
+
+
+class InternalUserLookupResponse(BaseModel):
+    """Schema tra cứu nhanh thông tin người dùng cho các Enterprise Service nội bộ (Sprint 2)."""
+
+    id: UUID
+    email: EmailStr
+    phone: Optional[str] = None
+    full_name: str
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)

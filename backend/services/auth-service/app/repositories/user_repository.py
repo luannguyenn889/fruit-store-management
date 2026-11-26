@@ -11,7 +11,13 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.user import RefreshToken, Role, User
+from app.models.user import (
+    AuthAuditLog,
+    PasswordResetToken,
+    RefreshToken,
+    Role,
+    User,
+)
 
 
 class UserRepository:
@@ -178,3 +184,79 @@ class UserRepository:
             .values(is_revoked=True)
         )
         await self.session.execute(stmt)
+
+    # =========================================================================
+    # TRUY VẤN BẢNG PASSWORD_RESET_TOKENS (FR-A10)
+    # =========================================================================
+    async def create_password_reset_token(
+        self, reset_token: PasswordResetToken
+    ) -> PasswordResetToken:
+        """Lưu token đặt lại mật khẩu (đã băm SHA-256) vào bảng `password_reset_tokens`."""
+        self.session.add(reset_token)
+        await self.session.flush()
+        return reset_token
+
+    async def get_password_reset_token_by_hash(
+        self, token_hash: str
+    ) -> Optional[PasswordResetToken]:
+        """Tra cứu token đặt lại mật khẩu theo mã băm SHA-256."""
+        stmt = select(PasswordResetToken).where(
+            PasswordResetToken.token_hash == token_hash
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def invalidate_active_reset_tokens(
+        self, user_id: UUID, used_at
+    ) -> None:
+        """Vô hiệu hóa các token reset cũ chưa dùng của người dùng khi tạo/đặt lại mật khẩu mới."""
+        stmt = (
+            update(PasswordResetToken)
+            .where(
+                PasswordResetToken.user_id == user_id,
+                PasswordResetToken.used_at.is_(None),
+            )
+            .values(used_at=used_at)
+        )
+        await self.session.execute(stmt)
+
+    # =========================================================================
+    # TRUY VẤN BẢNG AUTH_AUDIT_LOGS (FR-H01, NFR-S11)
+    # =========================================================================
+    async def create_audit_log(self, log: AuthAuditLog) -> AuthAuditLog:
+        """Ghi bản ghi nhật ký kiểm toán bất biến vào `auth_audit_logs`."""
+        self.session.add(log)
+        await self.session.flush()
+        return log
+
+    async def list_audit_logs(
+        self,
+        page: int = 1,
+        size: int = 20,
+        action: Optional[str] = None,
+        target_user_id: Optional[UUID] = None,
+    ) -> Tuple[List[AuthAuditLog], int]:
+        """Tra cứu nhật ký kiểm toán phân trang (chỉ đọc, phục vụ ADMIN)."""
+        filters = []
+        if action and action.strip():
+            filters.append(AuthAuditLog.action == action.strip().upper())
+        if target_user_id is not None:
+            filters.append(AuthAuditLog.target_user_id == target_user_id)
+
+        count_stmt = select(func.count()).select_from(AuthAuditLog)
+        if filters:
+            count_stmt = count_stmt.where(*filters)
+        total = int((await self.session.execute(count_stmt)).scalar_one() or 0)
+
+        offset = (page - 1) * size
+        data_stmt = (
+            select(AuthAuditLog)
+            .order_by(AuthAuditLog.created_at.desc())
+            .offset(offset)
+            .limit(size)
+        )
+        if filters:
+            data_stmt = data_stmt.where(*filters)
+
+        result = await self.session.execute(data_stmt)
+        return list(result.scalars().all()), total
