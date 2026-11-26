@@ -325,36 +325,36 @@ async def update_user_status(
 @router.post(
     "/forgot-password",
     response_model=MessageResponse,
-    summary="Yêu cầu gửi liên kết đặt lại mật khẩu qua Email (FR-A10)",
+    summary="Yêu cầu gửi mã xác nhận OTP 6 chữ số đặt lại mật khẩu qua Email (FR-A10)",
 )
 async def forgot_password(
     payload: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
-    """Tạo token đặt lại mật khẩu có TTL 15 phút và gửi qua Gmail SMTP ở nền."""
+    """Tạo mã OTP 6 chữ số có TTL 15 phút và gửi qua Gmail SMTP ở nền."""
     email_job = await auth_service.request_password_reset(session, payload)
     if email_job is not None:
-        to_email, full_name, reset_link = email_job
+        to_email, full_name, otp_code = email_job
         background_tasks.add_task(
-            send_password_reset_email, to_email, full_name, reset_link
+            send_password_reset_email, to_email, full_name, otp_code
         )
     return MessageResponse(
-        message="Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu đã được gửi."
+        message="Nếu email tồn tại trong hệ thống, mã xác nhận 6 chữ số đã được gửi tới hộp thư của bạn."
     )
 
 
 @router.post(
     "/reset-password",
     response_model=MessageResponse,
-    summary="Đặt lại mật khẩu mới bằng token từ Email (FR-A10)",
+    summary="Đặt lại mật khẩu mới bằng mã OTP 6 chữ số từ Email (FR-A10)",
 )
 async def reset_password(
     payload: ResetPasswordRequest,
     request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
-    """Kiểm tra token còn hiệu lực, cập nhật mật khẩu mới và thu hồi các phiên cũ."""
+    """Kiểm tra mã OTP 6 chữ số còn hiệu lực, cập nhật mật khẩu mới và thu hồi các phiên cũ."""
     _, ip_address = _extract_client_meta(request)
     await auth_service.reset_password_with_token(
         session=session,

@@ -1,13 +1,14 @@
 /**
  * Module: features/auth/forgot-password/forgot-password.component.ts
  * Nhiệm vụ: Màn hình Quên mật khẩu (`/forgot-password` - FR-A10).
- *           Gửi yêu cầu tới `POST /api/v1/auth/forgot-password` để nhận email Gmail chứa liên kết đặt lại mật khẩu.
+ *           Gửi yêu cầu tới `POST /api/v1/auth/forgot-password` để nhận mã OTP 6 chữ số qua Gmail
+ *           và chuyển sang màn hình nhập mã `/reset-password`.
  */
 
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 
@@ -21,11 +22,11 @@ import { ToastService } from '../../../core/services/toast.service';
 export class ForgotPasswordComponent {
   email = '';
   isLoading = signal(false);
-  isSent = signal(false);
 
   constructor(
     private authService: AuthService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private router: Router
   ) {}
 
   onSubmit(): void {
@@ -39,8 +40,10 @@ export class ForgotPasswordComponent {
     this.authService.forgotPassword(cleanEmail).subscribe({
       next: res => {
         this.isLoading.set(false);
-        this.isSent.set(true);
         this.toastService.success(res.message);
+        this.router.navigate(['/reset-password'], {
+          queryParams: { email: cleanEmail }
+        });
       },
       error: err => {
         this.isLoading.set(false);

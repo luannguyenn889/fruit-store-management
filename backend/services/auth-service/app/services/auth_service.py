@@ -714,8 +714,8 @@ async def request_password_reset(
     session: AsyncSession, payload: ForgotPasswordRequest
 ) -> Optional[Tuple[str, str, str]]:
     """
-    Tạo token đặt lại mật khẩu (TTL 15 phút, lưu SHA-256) nếu email tồn tại & đang ACTIVE.
-    Trả về `(to_email, full_name, reset_link)` để router gửi email ở BackgroundTasks,
+    Sinh mã OTP 6 chữ số (TTL 15 phút, lưu SHA-256 gắn với email) nếu tài khoản ACTIVE.
+    Trả về `(to_email, full_name, otp_code)` để router gửi email ở BackgroundTasks,
     hoặc `None` nếu email không hợp lệ/không tồn tại (API vẫn trả 200 chống dò email).
     """
     repo = UserRepository(session)
@@ -726,19 +726,18 @@ async def request_password_reset(
     now = datetime.now(timezone.utc)
     await repo.invalidate_active_reset_tokens(user.id, used_at=now)
 
-    raw_token = secrets.token_urlsafe(32)
+    otp_code = f"{secrets.randbelow(1_000_000):06d}"
     expires_at = now + timedelta(minutes=settings.RESET_TOKEN_EXPIRE_MINUTES)
     await repo.create_password_reset_token(
         PasswordResetToken(
             user_id=user.id,
-            token_hash=hash_token(raw_token),
+            token_hash=hash_token(f"{user.email}:{otp_code}"),
             expires_at=expires_at,
         )
     )
     await session.commit()
 
-    reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
-    return user.email, user.full_name, reset_link
+    return user.email, user.full_name, otp_code
 
 
 async def reset_password_with_token(
@@ -747,20 +746,34 @@ async def reset_password_with_token(
     request_id: Optional[str] = None,
     ip_address: Optional[str] = None,
 ) -> None:
-    """Xác minh token reset còn hạn & chưa dùng, cập nhật mật khẩu mới và thu hồi phiên cũ."""
+    """Xác minh mã OTP 6 chữ số còn hạn & chưa dùng, cập nhật mật khẩu mới và thu hồi phiên cũ."""
     repo = UserRepository(session)
-    record = await repo.get_password_reset_token_by_hash(hash_token(payload.token))
+    normalized_email = payload.email.lower().strip()
+    user = await repo.get_by_email(normalized_email)
     now = datetime.now(timezone.utc)
 
-    if not record or record.used_at is not None or _as_utc(record.expires_at) <= now:
+    record = (
+        await repo.get_password_reset_token_by_hash(
+            hash_token(f"{normalized_email}:{payload.otp_code}")
+        )
+        if user
+        else None
+    )
+
+    if (
+        not user
+        or not record
+        or record.user_id != user.id
+        or record.used_at is not None
+        or _as_utc(record.expires_at) <= now
+    ):
         raise AppError(
             status_code=400,
             code="INVALID_OR_EXPIRED_RESET_TOKEN",
-            message="Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu lại.",
+            message="Mã xác nhận 6 chữ số không đúng hoặc đã hết hạn. Vui lòng kiểm tra lại.",
         )
 
-    user = await repo.get_by_id(record.user_id)
-    if not user or user.status != "ACTIVE":
+    if user.status != "ACTIVE":
         raise AppError(
             status_code=403,
             code="ACCOUNT_LOCKED",

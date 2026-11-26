@@ -178,9 +178,14 @@ class ForgotPasswordRequest(BaseModel):
 
 
 class ResetPasswordRequest(BaseModel):
-    """Schema đặt lại mật khẩu mới bằng token từ Email (FR-A10)."""
+    """Schema đặt lại mật khẩu mới bằng mã OTP 6 chữ số từ Email (FR-A10)."""
 
-    token: str = Field(..., min_length=10, description="Token đặt lại mật khẩu")
+    email: EmailStr = Field(..., description="Email tài khoản cần đặt lại mật khẩu")
+    otp_code: str = Field(
+        ...,
+        pattern=r"^\d{6}$",
+        description="Mã xác nhận OTP gồm đúng 6 chữ số",
+    )
     new_password: str = Field(
         ..., min_length=6, max_length=100, description="Mật khẩu mới tối thiểu 6 ký tự"
     )
