@@ -42,6 +42,33 @@ export interface PaginatedUsers {
   pages: number;
 }
 
+export interface AuditLogItem {
+  id: string;
+  actor_user_id?: string | null;
+  target_user_id?: string | null;
+  action: string;
+  old_value?: string | null;
+  new_value?: string | null;
+  request_id?: string | null;
+  ip_address?: string | null;
+  created_at: string;
+}
+
+export interface PaginatedAuditLogs {
+  items: AuditLogItem[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
+export interface AuditLogFilterParams {
+  page?: number;
+  size?: number;
+  action?: string;
+  target_user_id?: string;
+}
+
 export interface TokenResponse {
   access_token: string;
   refresh_token?: string | null;
@@ -234,6 +261,23 @@ export class AuthService {
       { status },
       { headers: this.getAuthHeaders() }
     );
+  }
+
+  /** Tra cứu nhật ký kiểm toán bảo mật/quản trị bất biến (Chỉ ADMIN - FR-H01) */
+  getAuditLogs(filters: AuditLogFilterParams = {}): Observable<PaginatedAuditLogs> {
+    let params = new HttpParams()
+      .set('page', String(filters.page ?? 1))
+      .set('size', String(filters.size ?? 20));
+    if (filters.action) {
+      params = params.set('action', filters.action);
+    }
+    if (filters.target_user_id && filters.target_user_id.trim()) {
+      params = params.set('target_user_id', filters.target_user_id.trim());
+    }
+    return this.http.get<PaginatedAuditLogs>(`${this.apiUrl}/audit-logs`, {
+      headers: this.getAuthHeaders(),
+      params
+    });
   }
 
   /**
