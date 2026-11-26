@@ -4,7 +4,7 @@
  *           - `/shop`: Cửa hàng trực tuyến (Storefront) công khai cho Khách hàng.
  *           - `/profile`: Hồ sơ cá nhân & đổi mật khẩu cho Khách hàng (yêu cầu đăng nhập).
  *           - `/login`, `/register`: Màn hình xác thực.
- *           - `/dashboard`, `/catalog`, `/users`: Khu vực quản trị nội bộ (chặn `CUSTOMER` bằng `roleGuard`).
+ *           - `/dashboard`, `/catalog`, `/inventory`, `/procurement`, `/users`: Khu vực quản trị nội bộ (chặn theo `roleGuard`).
  */
 
 import { Routes } from '@angular/router';
@@ -12,6 +12,8 @@ import { LoginComponent } from './features/auth/login/login.component';
 import { RegisterComponent } from './features/auth/register/register.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { CatalogComponent } from './features/catalog/catalog.component';
+import { InventoryComponent } from './features/inventory/inventory.component';
+import { ProcurementComponent } from './features/procurement/procurement.component';
 import { UsersComponent } from './features/users/users.component';
 import { ShopComponent } from './features/shop/shop.component';
 import { CustomerProfileComponent } from './features/profile/customer-profile.component';
@@ -34,6 +36,16 @@ export const routes: Routes = [
     path: 'catalog',
     component: CatalogComponent,
     canActivate: [authGuard, roleGuard(INTERNAL_ROLES)]
+  },
+  {
+    path: 'inventory',
+    component: InventoryComponent,
+    canActivate: [authGuard, roleGuard(INTERNAL_ROLES)]
+  },
+  {
+    path: 'procurement',
+    component: ProcurementComponent,
+    canActivate: [authGuard, roleGuard(['ADMIN', 'MANAGER', 'WAREHOUSE'])]
   },
   {
     path: 'users',

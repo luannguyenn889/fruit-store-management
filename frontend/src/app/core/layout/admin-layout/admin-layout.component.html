@@ -111,7 +111,12 @@
           </span>
           <span class="nav-label">Danh mục Sản phẩm</span>
         </a>
-        <a href="javascript:void(0)" class="nav-item disabled" aria-disabled="true" title="Chức năng đang phát triển">
+        <a
+          routerLink="/inventory"
+          routerLinkActive="active"
+          (click)="closeMobileDrawer()"
+          class="nav-item"
+        >
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="m7.5 4.27 9 5.15"/>
@@ -123,7 +128,12 @@
           <span class="nav-label">Tồn kho & Lô hàng FEFO</span>
         </a>
         @if (canSeeStockOps()) {
-          <a href="javascript:void(0)" class="nav-item disabled" aria-disabled="true" title="Chức năng đang phát triển">
+          <a
+            routerLink="/procurement"
+            routerLinkActive="active"
+            (click)="closeMobileDrawer()"
+            class="nav-item"
+          >
             <span class="nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="1" y="3" width="15" height="13"/>
