@@ -161,6 +161,24 @@ export class AuthService {
     );
   }
 
+  /** Yêu cầu gửi email đặt lại mật khẩu (FR-A10) */
+  forgotPassword(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/forgot-password`, {
+      email: email.trim()
+    });
+  }
+
+  /** Đặt lại mật khẩu mới bằng token nhận từ Email (FR-A10) */
+  resetPassword(
+    token: string,
+    newPassword: string
+  ): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/reset-password`, {
+      token: token.trim(),
+      new_password: newPassword
+    });
+  }
+
   // ===========================================================================
   // QUẢN TRỊ NHÂN SỰ & PHÂN QUYỀN (CHỈ ADMIN)
   // ===========================================================================

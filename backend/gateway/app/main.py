@@ -10,7 +10,9 @@ Nhiệm vụ: Cổng giao tiếp tập trung (Reverse Proxy & JWT Authentication
              đảm bảo lỗi được cô lập từng phần (NFR-R03).
 """
 
-from typing import Any, Dict, Optional, Tuple
+from collections import defaultdict, deque
+import time
+from typing import Any, Deque, Dict, Optional, Tuple
 from uuid import uuid4
 
 import httpx
@@ -48,7 +50,42 @@ PUBLIC_AUTH_PATHS = {
     "/api/v1/auth/google",
     "/api/v1/auth/register",
     "/api/v1/auth/refresh",
+    "/api/v1/auth/forgot-password",
+    "/api/v1/auth/reset-password",
 }
+
+# Bộ đếm Rate Limit trượt 60 giây theo IP (NFR-S04)
+RATE_LIMIT_WINDOW_SECONDS = 60
+RATE_LIMIT_MAX_ATTEMPTS = 5
+_FAILED_LOGIN_BUCKETS: Dict[str, Deque[float]] = defaultdict(deque)
+_FORGOT_PASSWORD_BUCKETS: Dict[str, Deque[float]] = defaultdict(deque)
+
+
+def _extract_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _prune_bucket(bucket: Deque[float], now: float) -> None:
+    cutoff = now - RATE_LIMIT_WINDOW_SECONDS
+    while bucket and bucket[0] < cutoff:
+        bucket.popleft()
+
+
+def _is_rate_limited(buckets: Dict[str, Deque[float]], key: str) -> bool:
+    now = time.monotonic()
+    bucket = buckets[key]
+    _prune_bucket(bucket, now)
+    return len(bucket) >= RATE_LIMIT_MAX_ATTEMPTS
+
+
+def _record_rate_event(buckets: Dict[str, Deque[float]], key: str) -> None:
+    now = time.monotonic()
+    bucket = buckets[key]
+    _prune_bucket(bucket, now)
+    bucket.append(now)
 
 # Các hop-by-hop headers không được chuyển tiếp qua proxy
 HOP_BY_HOP_HEADERS = {
@@ -182,6 +219,50 @@ async def forward_request(
 ) -> Response:
     """Thực hiện kiểm tra JWT, làm sạch header và proxy request tới service đích."""
     request_id = request.headers.get("x-request-id") or str(uuid4())
+    normalized_path = request.url.path.rstrip("/") or "/"
+    upper_method = request.method.upper()
+
+    # Chặn các route nội bộ service-to-service không cho client bên ngoài gọi qua Gateway
+    if normalized_path.startswith("/api/v1/auth/internal"):
+        blocked = JSONResponse(
+            status_code=403,
+            content={
+                "code": "FORBIDDEN_INTERNAL_ROUTE",
+                "message": "Endpoint nội bộ không thể truy cập từ bên ngoài qua API Gateway.",
+                "details": {},
+            },
+        )
+        blocked.headers["X-Request-ID"] = request_id
+        return blocked
+
+    client_ip = _extract_client_ip(request)
+    if upper_method == "POST" and normalized_path == "/api/v1/auth/login":
+        if _is_rate_limited(_FAILED_LOGIN_BUCKETS, client_ip):
+            limited = JSONResponse(
+                status_code=429,
+                content={
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 1 phút.",
+                    "details": {"retry_after_seconds": RATE_LIMIT_WINDOW_SECONDS},
+                },
+            )
+            limited.headers["X-Request-ID"] = request_id
+            return limited
+
+    if upper_method == "POST" and normalized_path == "/api/v1/auth/forgot-password":
+        if _is_rate_limited(_FORGOT_PASSWORD_BUCKETS, client_ip):
+            limited = JSONResponse(
+                status_code=429,
+                content={
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Bạn đã gửi quá nhiều yêu cầu đặt lại mật khẩu. Vui lòng thử lại sau 1 phút.",
+                    "details": {"retry_after_seconds": RATE_LIMIT_WINDOW_SECONDS},
+                },
+            )
+            limited.headers["X-Request-ID"] = request_id
+            return limited
+        _record_rate_event(_FORGOT_PASSWORD_BUCKETS, client_ip)
+
     require_token = not is_public_route(request.method, request.url.path)
 
     claims, auth_error = verify_jwt_from_request(request, require_token=require_token)
@@ -234,6 +315,13 @@ async def forward_request(
         if k.lower() not in HOP_BY_HOP_HEADERS
     }
     response_headers["X-Request-ID"] = request_id
+
+    if (
+        upper_method == "POST"
+        and normalized_path == "/api/v1/auth/login"
+        and upstream_resp.status_code in (401, 403)
+    ):
+        _record_rate_event(_FAILED_LOGIN_BUCKETS, client_ip)
 
     return Response(
         content=upstream_resp.content,

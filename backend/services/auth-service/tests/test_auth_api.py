@@ -367,3 +367,120 @@ async def test_google_login_verifies_signature_and_rejects_forged_token(
         assert [r["code"] for r in valid_resp.json()["user"]["roles"]] == [
             "CUSTOMER"
         ]
+
+
+@pytest.mark.asyncio
+async def test_brute_force_locks_account_after_5_failed_attempts(
+    client: AsyncClient,
+) -> None:
+    """Kiểm tra FR-A07: nhập sai mật khẩu 5 lần liên tiếp tự động khóa tạm thời 15 phút."""
+    for i in range(4):
+        resp = await client.post(
+            "/api/v1/auth/login",
+            headers=INTERNAL_HEADERS,
+            json={"email": "staff@fruitstore.com", "password": f"WrongPass{i}"},
+        )
+        assert resp.status_code == 401
+
+    locked_resp = await client.post(
+        "/api/v1/auth/login",
+        headers=INTERNAL_HEADERS,
+        json={"email": "staff@fruitstore.com", "password": "WrongPass4"},
+    )
+    assert locked_resp.status_code == 403
+    assert locked_resp.json()["code"] == "ACCOUNT_TEMPORARILY_LOCKED"
+
+    # Kể cả nhập đúng mật khẩu trong lúc đang bị khóa vẫn bị từ chối
+    valid_while_locked = await client.post(
+        "/api/v1/auth/login",
+        headers=INTERNAL_HEADERS,
+        json={"email": "staff@fruitstore.com", "password": settings.SEED_STAFF_PASSWORD},
+    )
+    assert valid_while_locked.status_code == 403
+    assert valid_while_locked.json()["code"] == "ACCOUNT_TEMPORARILY_LOCKED"
+
+
+@pytest.mark.asyncio
+async def test_forgot_and_reset_password_flow_and_internal_lookup(
+    client: AsyncClient,
+) -> None:
+    """
+    Kiểm tra FR-A10 (Quên mật khẩu qua Gmail SMTP, token dùng 1 lần),
+    FR-H01 (Audit Log cho ADMIN) và endpoint nội bộ `/internal/users/{id}`.
+    """
+    captured_links: list[str] = []
+
+    def _fake_send_email(to_email: str, full_name: str, reset_link: str) -> None:
+        captured_links.append(reset_link)
+
+    with patch(
+        "app.api.v1.auth.send_password_reset_email",
+        side_effect=_fake_send_email,
+    ):
+        forgot_resp = await client.post(
+            "/api/v1/auth/forgot-password",
+            headers=INTERNAL_HEADERS,
+            json={"email": "manager@fruitstore.com"},
+        )
+        assert forgot_resp.status_code == 200
+        assert len(captured_links) == 1
+
+        # Email không tồn tại vẫn trả 200 để chống dò email
+        unknown_resp = await client.post(
+            "/api/v1/auth/forgot-password",
+            headers=INTERNAL_HEADERS,
+            json={"email": "khongtontai@fruitstore.com"},
+        )
+        assert unknown_resp.status_code == 200
+        assert len(captured_links) == 1
+
+    raw_token = captured_links[0].split("token=")[-1]
+    reset_resp = await client.post(
+        "/api/v1/auth/reset-password",
+        headers=INTERNAL_HEADERS,
+        json={"token": raw_token, "new_password": "NewManager@2026"},
+    )
+    assert reset_resp.status_code == 200
+
+    # Token chỉ dùng được 1 lần
+    reuse_resp = await client.post(
+        "/api/v1/auth/reset-password",
+        headers=INTERNAL_HEADERS,
+        json={"token": raw_token, "new_password": "Another@2026"},
+    )
+    assert reuse_resp.status_code == 400
+    assert reuse_resp.json()["code"] == "INVALID_OR_EXPIRED_RESET_TOKEN"
+
+    # Đăng nhập bằng mật khẩu mới thành công
+    login_resp = await client.post(
+        "/api/v1/auth/login",
+        headers=INTERNAL_HEADERS,
+        json={"email": "manager@fruitstore.com", "password": "NewManager@2026"},
+    )
+    assert login_resp.status_code == 200
+    manager_id = login_resp.json()["user"]["id"]
+
+    # Tra cứu nội bộ cho Sprint 2 (bắt buộc X-Internal-Key)
+    internal_forbidden = await client.get(f"/api/v1/auth/internal/users/{manager_id}")
+    assert internal_forbidden.status_code == 403
+
+    internal_ok = await client.get(
+        f"/api/v1/auth/internal/users/{manager_id}",
+        headers=INTERNAL_HEADERS,
+    )
+    assert internal_ok.status_code == 200
+    assert internal_ok.json()["email"] == "manager@fruitstore.com"
+
+    # Kiểm tra Audit Log (FR-H01): ADMIN xem được PASSWORD_RESET_COMPLETED
+    admin_login = await client.post(
+        "/api/v1/auth/login",
+        headers=INTERNAL_HEADERS,
+        json={"email": "admin@fruitstore.com", "password": settings.SEED_ADMIN_PASSWORD},
+    )
+    admin_token = admin_login.json()["access_token"]
+    audit_resp = await client.get(
+        "/api/v1/auth/audit-logs?action=PASSWORD_RESET_COMPLETED",
+        headers={**INTERNAL_HEADERS, "Authorization": f"Bearer {admin_token}"},
+    )
+    assert audit_resp.status_code == 200
+    assert audit_resp.json()["total"] >= 1

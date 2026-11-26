@@ -11,10 +11,11 @@ Nhiệm vụ: Xử lý toàn bộ nghiệp vụ xác thực, quản lý phiên v
              `admin_create_user`, `admin_update_user_roles`, `admin_update_user_status`).
 """
 
+import json
 import math
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import UUID
 
 from google.auth.transport import requests as google_requests
@@ -30,17 +31,28 @@ from app.core.security import (
     hash_token,
     verify_password,
 )
-from app.models.user import RefreshToken, Role, User
+from app.models.user import (
+    AuthAuditLog,
+    PasswordResetToken,
+    RefreshToken,
+    Role,
+    User,
+)
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import (
     AdminUserCreate,
     AdminUserRolesUpdate,
     AdminUserStatusUpdate,
+    AuditLogResponse,
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     GoogleLoginRequest,
+    InternalUserLookupResponse,
     LogoutRequest,
+    PaginatedAuditLogsResponse,
     PaginatedUsersResponse,
     RefreshTokenRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UpdateProfileRequest,
     UserLogin,
@@ -50,6 +62,16 @@ from app.schemas.user import (
 
 # Thứ tự ưu tiên vai trò khi chọn role chính đưa vào claim `role` của JWT
 ROLE_PRIORITY = ["ADMIN", "MANAGER", "STAFF", "WAREHOUSE", "CUSTOMER"]
+
+
+def _as_utc(dt: datetime) -> datetime:
+    """Chuẩn hóa datetime về UTC aware để so sánh an toàn trên cả PostgreSQL và SQLite."""
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
+
+def _dump_audit_json(data: dict) -> str:
+    """Chuyển dữ liệu audit sang chuỗi JSON UTF-8 ngắn gọn."""
+    return json.dumps(data, ensure_ascii=False)
 
 
 def resolve_primary_role(user: User) -> str:
@@ -171,26 +193,86 @@ async def authenticate_user(
     payload: UserLogin,
     user_agent: Optional[str] = None,
     ip_address: Optional[str] = None,
+    request_id: Optional[str] = None,
 ) -> TokenResponse:
-    """Xác thực đăng nhập bằng Email (hoặc SĐT) + mật khẩu và phát hành cặp Access/Refresh Token."""
+    """
+    Xác thực đăng nhập bằng Email (hoặc SĐT) + mật khẩu và phát hành cặp Access/Refresh Token.
+    Tích hợp khóa tạm thời chống Brute-force (FR-A07): sai quá 5 lần liên tiếp khóa 15 phút.
+    """
     repo = UserRepository(session)
     user = await repo.get_by_identifier(payload.email)
+    now = datetime.now(timezone.utc)
 
-    if not user or not verify_password(payload.password, user.password_hash):
-        raise AppError(
-            status_code=401,
-            code="INVALID_CREDENTIALS",
-            message="Email/số điện thoại hoặc mật khẩu không chính xác.",
-        )
-
-    if user.status != "ACTIVE":
+    if user and user.status != "ACTIVE":
         raise AppError(
             status_code=403,
             code="ACCOUNT_LOCKED",
             message=f"Tài khoản của bạn hiện đang ở trạng thái '{user.status}'. Vui lòng liên hệ quản trị viên.",
         )
 
-    user.last_login_at = datetime.now(timezone.utc)
+    if user and user.locked_until and _as_utc(user.locked_until) > now:
+        remaining_minutes = max(
+            1, math.ceil((_as_utc(user.locked_until) - now).total_seconds() / 60)
+        )
+        raise AppError(
+            status_code=403,
+            code="ACCOUNT_TEMPORARILY_LOCKED",
+            message=(
+                f"Tài khoản tạm thời bị khóa do nhập sai mật khẩu quá {settings.MAX_FAILED_LOGIN_ATTEMPTS} lần. "
+                f"Vui lòng thử lại sau {remaining_minutes} phút."
+            ),
+            details={"locked_until": _as_utc(user.locked_until).isoformat()},
+        )
+
+    if not user or not verify_password(payload.password, user.password_hash):
+        if user:
+            # Nếu đã hết thời gian khóa cũ thì bắt đầu đếm lại từ 1
+            if user.locked_until and _as_utc(user.locked_until) <= now:
+                user.failed_login_attempts = 0
+                user.locked_until = None
+
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            if user.failed_login_attempts >= settings.MAX_FAILED_LOGIN_ATTEMPTS:
+                user.locked_until = now + timedelta(
+                    minutes=settings.ACCOUNT_LOCK_MINUTES
+                )
+                await repo.create_audit_log(
+                    AuthAuditLog(
+                        actor_user_id=user.id,
+                        target_user_id=user.id,
+                        action="ACCOUNT_LOCKED_BRUTE_FORCE",
+                        old_value=_dump_audit_json({"locked_until": None}),
+                        new_value=_dump_audit_json(
+                            {
+                                "failed_attempts": user.failed_login_attempts,
+                                "locked_until": user.locked_until.isoformat(),
+                            }
+                        ),
+                        request_id=request_id,
+                        ip_address=ip_address,
+                    )
+                )
+                await session.commit()
+                raise AppError(
+                    status_code=403,
+                    code="ACCOUNT_TEMPORARILY_LOCKED",
+                    message=(
+                        f"Bạn đã nhập sai mật khẩu {settings.MAX_FAILED_LOGIN_ATTEMPTS} lần liên tiếp. "
+                        f"Tài khoản bị khóa tạm thời {settings.ACCOUNT_LOCK_MINUTES} phút."
+                    ),
+                    details={"locked_until": user.locked_until.isoformat()},
+                )
+            await session.commit()
+
+        raise AppError(
+            status_code=401,
+            code="INVALID_CREDENTIALS",
+            message="Email/số điện thoại hoặc mật khẩu không chính xác.",
+        )
+
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    user.last_login_at = now
     return await issue_session_tokens(
         session=session,
         user=user,
@@ -457,7 +539,11 @@ async def list_users(
 
 
 async def admin_create_user(
-    session: AsyncSession, payload: AdminUserCreate
+    session: AsyncSession,
+    payload: AdminUserCreate,
+    actor: Optional[User] = None,
+    request_id: Optional[str] = None,
+    ip_address: Optional[str] = None,
 ) -> User:
     """Tạo tài khoản nội bộ mới kèm danh sách vai trò được chỉ định (chỉ dành cho ADMIN)."""
     repo = UserRepository(session)
@@ -499,6 +585,19 @@ async def admin_create_user(
         roles=roles,
     )
     await repo.create_user(new_user)
+    await repo.create_audit_log(
+        AuthAuditLog(
+            actor_user_id=actor.id if actor else None,
+            target_user_id=new_user.id,
+            action="ADMIN_CREATE_USER",
+            old_value=None,
+            new_value=_dump_audit_json(
+                {"email": normalized_email, "roles": requested_codes, "status": "ACTIVE"}
+            ),
+            request_id=request_id,
+            ip_address=ip_address,
+        )
+    )
     await session.commit()
     return await repo.get_by_id(new_user.id)  # type: ignore[return-value]
 
@@ -508,6 +607,8 @@ async def admin_update_user_roles(
     actor: User,
     target_user_id: UUID,
     payload: AdminUserRolesUpdate,
+    request_id: Optional[str] = None,
+    ip_address: Optional[str] = None,
 ) -> User:
     """Cập nhật vai trò cho một tài khoản (chặn ADMIN tự tước quyền ADMIN của chính mình)."""
     repo = UserRepository(session)
@@ -538,7 +639,19 @@ async def admin_update_user_roles(
             details={"invalid_roles": missing},
         )
 
+    old_roles = sorted(r.code.upper() for r in target_user.roles)
     target_user.roles = roles
+    await repo.create_audit_log(
+        AuthAuditLog(
+            actor_user_id=actor.id,
+            target_user_id=target_user.id,
+            action="UPDATE_USER_ROLES",
+            old_value=_dump_audit_json({"roles": old_roles}),
+            new_value=_dump_audit_json({"roles": requested_codes}),
+            request_id=request_id,
+            ip_address=ip_address,
+        )
+    )
     await session.commit()
     return await repo.get_by_id(target_user.id)  # type: ignore[return-value]
 
@@ -548,6 +661,8 @@ async def admin_update_user_status(
     actor: User,
     target_user_id: UUID,
     payload: AdminUserStatusUpdate,
+    request_id: Optional[str] = None,
+    ip_address: Optional[str] = None,
 ) -> User:
     """
     Khóa / mở khóa / ngừng kích hoạt tài khoản (chỉ dành cho ADMIN).
@@ -569,9 +684,141 @@ async def admin_update_user_status(
             message="Bạn không thể tự khóa hoặc vô hiệu hóa tài khoản đang đăng nhập của chính mình.",
         )
 
+    old_status = target_user.status
     target_user.status = payload.status
-    if payload.status != "ACTIVE":
+    if payload.status == "ACTIVE":
+        target_user.failed_login_attempts = 0
+        target_user.locked_until = None
+    else:
         await repo.revoke_all_user_refresh_tokens(target_user.id)
 
+    await repo.create_audit_log(
+        AuthAuditLog(
+            actor_user_id=actor.id,
+            target_user_id=target_user.id,
+            action="UPDATE_USER_STATUS",
+            old_value=_dump_audit_json({"status": old_status}),
+            new_value=_dump_audit_json({"status": payload.status}),
+            request_id=request_id,
+            ip_address=ip_address,
+        )
+    )
     await session.commit()
     return await repo.get_by_id(target_user.id)  # type: ignore[return-value]
+
+
+# =============================================================================
+# 6. QUÊN MẬT KHẨU QUA EMAIL (FR-A10), AUDIT LOG (FR-H01) & TRA CỨU NỘI BỘ
+# =============================================================================
+async def request_password_reset(
+    session: AsyncSession, payload: ForgotPasswordRequest
+) -> Optional[Tuple[str, str, str]]:
+    """
+    Tạo token đặt lại mật khẩu (TTL 15 phút, lưu SHA-256) nếu email tồn tại & đang ACTIVE.
+    Trả về `(to_email, full_name, reset_link)` để router gửi email ở BackgroundTasks,
+    hoặc `None` nếu email không hợp lệ/không tồn tại (API vẫn trả 200 chống dò email).
+    """
+    repo = UserRepository(session)
+    user = await repo.get_by_email(payload.email)
+    if not user or user.status != "ACTIVE":
+        return None
+
+    now = datetime.now(timezone.utc)
+    await repo.invalidate_active_reset_tokens(user.id, used_at=now)
+
+    raw_token = secrets.token_urlsafe(32)
+    expires_at = now + timedelta(minutes=settings.RESET_TOKEN_EXPIRE_MINUTES)
+    await repo.create_password_reset_token(
+        PasswordResetToken(
+            user_id=user.id,
+            token_hash=hash_token(raw_token),
+            expires_at=expires_at,
+        )
+    )
+    await session.commit()
+
+    reset_link = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
+    return user.email, user.full_name, reset_link
+
+
+async def reset_password_with_token(
+    session: AsyncSession,
+    payload: ResetPasswordRequest,
+    request_id: Optional[str] = None,
+    ip_address: Optional[str] = None,
+) -> None:
+    """Xác minh token reset còn hạn & chưa dùng, cập nhật mật khẩu mới và thu hồi phiên cũ."""
+    repo = UserRepository(session)
+    record = await repo.get_password_reset_token_by_hash(hash_token(payload.token))
+    now = datetime.now(timezone.utc)
+
+    if not record or record.used_at is not None or _as_utc(record.expires_at) <= now:
+        raise AppError(
+            status_code=400,
+            code="INVALID_OR_EXPIRED_RESET_TOKEN",
+            message="Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu lại.",
+        )
+
+    user = await repo.get_by_id(record.user_id)
+    if not user or user.status != "ACTIVE":
+        raise AppError(
+            status_code=403,
+            code="ACCOUNT_LOCKED",
+            message="Tài khoản không hoạt động hoặc đã bị khóa.",
+        )
+
+    user.password_hash = get_password_hash(payload.new_password)
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    record.used_at = now
+
+    await repo.revoke_all_user_refresh_tokens(user.id)
+    await repo.create_audit_log(
+        AuthAuditLog(
+            actor_user_id=user.id,
+            target_user_id=user.id,
+            action="PASSWORD_RESET_COMPLETED",
+            old_value=None,
+            new_value=_dump_audit_json({"email": user.email}),
+            request_id=request_id,
+            ip_address=ip_address,
+        )
+    )
+    await session.commit()
+
+
+async def list_audit_logs(
+    session: AsyncSession,
+    page: int = 1,
+    size: int = 20,
+    action: Optional[str] = None,
+    target_user_id: Optional[UUID] = None,
+) -> PaginatedAuditLogsResponse:
+    """Lấy danh sách nhật ký kiểm toán phân trang cho Quản trị viên (FR-H01, NFR-S11)."""
+    repo = UserRepository(session)
+    logs, total = await repo.list_audit_logs(
+        page=page, size=size, action=action, target_user_id=target_user_id
+    )
+    pages = math.ceil(total / size) if total > 0 else 1
+    return PaginatedAuditLogsResponse(
+        items=[AuditLogResponse.model_validate(item) for item in logs],
+        total=total,
+        page=page,
+        size=size,
+        pages=pages,
+    )
+
+
+async def get_internal_user_lookup(
+    session: AsyncSession, user_id: UUID
+) -> InternalUserLookupResponse:
+    """Tra cứu nhanh thông tin user cho các Enterprise Service nội bộ (Order/Reporting)."""
+    repo = UserRepository(session)
+    user = await repo.get_by_id(user_id)
+    if not user:
+        raise AppError(
+            status_code=404,
+            code="USER_NOT_FOUND",
+            message="Không tìm thấy người dùng.",
+        )
+    return InternalUserLookupResponse.model_validate(user)

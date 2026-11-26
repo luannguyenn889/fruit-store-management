@@ -136,6 +136,27 @@
   margin-bottom: 6px;
 }
 
+.label-with-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.label-with-action .form-label {
+  margin-bottom: 0;
+}
+
+.forgot-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-brand-700);
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
 .input-with-icon {
   position: relative;
   display: flex;

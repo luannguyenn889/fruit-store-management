@@ -11,10 +11,11 @@ Nhiệm vụ: Định nghĩa các REST API endpoints cho Auth Service (tiền t�
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, require_roles, verify_internal_key
+from app.core.email import send_password_reset_email
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import (
@@ -22,11 +23,15 @@ from app.schemas.user import (
     AdminUserRolesUpdate,
     AdminUserStatusUpdate,
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     GoogleLoginRequest,
+    InternalUserLookupResponse,
     LogoutRequest,
     MessageResponse,
+    PaginatedAuditLogsResponse,
     PaginatedUsersResponse,
     RefreshTokenRequest,
+    ResetPasswordRequest,
     RoleResponse,
     TokenResponse,
     UpdateProfileRequest,
@@ -90,6 +95,7 @@ async def login(
         payload=payload,
         user_agent=user_agent,
         ip_address=ip_address,
+        request_id=request.headers.get("x-request-id"),
     )
 
 
@@ -247,11 +253,19 @@ async def list_users(
 )
 async def create_internal_user(
     payload: AdminUserCreate,
-    _: User = Depends(require_roles("ADMIN")),
+    request: Request,
+    actor: User = Depends(require_roles("ADMIN")),
     session: AsyncSession = Depends(get_db),
 ) -> UserResponse:
     """Tạo tài khoản mới và gán vai trò nội bộ (`MANAGER`, `STAFF`, `WAREHOUSE`, `ADMIN`)."""
-    user = await auth_service.admin_create_user(session, payload)
+    _, ip_address = _extract_client_meta(request)
+    user = await auth_service.admin_create_user(
+        session,
+        payload,
+        actor=actor,
+        request_id=request.headers.get("x-request-id"),
+        ip_address=ip_address,
+    )
     return UserResponse.model_validate(user)
 
 
@@ -263,12 +277,19 @@ async def create_internal_user(
 async def update_user_roles(
     user_id: UUID,
     payload: AdminUserRolesUpdate,
+    request: Request,
     actor: User = Depends(require_roles("ADMIN")),
     session: AsyncSession = Depends(get_db),
 ) -> UserResponse:
     """Cập nhật tập hợp vai trò cho tài khoản chỉ định."""
+    _, ip_address = _extract_client_meta(request)
     updated = await auth_service.admin_update_user_roles(
-        session=session, actor=actor, target_user_id=user_id, payload=payload
+        session=session,
+        actor=actor,
+        target_user_id=user_id,
+        payload=payload,
+        request_id=request.headers.get("x-request-id"),
+        ip_address=ip_address,
     )
     return UserResponse.model_validate(updated)
 
@@ -281,11 +302,102 @@ async def update_user_roles(
 async def update_user_status(
     user_id: UUID,
     payload: AdminUserStatusUpdate,
+    request: Request,
     actor: User = Depends(require_roles("ADMIN")),
     session: AsyncSession = Depends(get_db),
 ) -> UserResponse:
     """Thay đổi trạng thái tài khoản (`ACTIVE`, `LOCKED`, `INACTIVE`)."""
+    _, ip_address = _extract_client_meta(request)
     updated = await auth_service.admin_update_user_status(
-        session=session, actor=actor, target_user_id=user_id, payload=payload
+        session=session,
+        actor=actor,
+        target_user_id=user_id,
+        payload=payload,
+        request_id=request.headers.get("x-request-id"),
+        ip_address=ip_address,
     )
     return UserResponse.model_validate(updated)
+
+
+# =============================================================================
+# 4. QUÊN MẬT KHẨU (FR-A10), AUDIT LOG (FR-H01) & TRA CỨU NỘI BỘ (SPRINT 2)
+# =============================================================================
+@router.post(
+    "/forgot-password",
+    response_model=MessageResponse,
+    summary="Yêu cầu gửi liên kết đặt lại mật khẩu qua Email (FR-A10)",
+)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    session: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """Tạo token đặt lại mật khẩu có TTL 15 phút và gửi qua Gmail SMTP ở nền."""
+    email_job = await auth_service.request_password_reset(session, payload)
+    if email_job is not None:
+        to_email, full_name, reset_link = email_job
+        background_tasks.add_task(
+            send_password_reset_email, to_email, full_name, reset_link
+        )
+    return MessageResponse(
+        message="Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu đã được gửi."
+    )
+
+
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse,
+    summary="Đặt lại mật khẩu mới bằng token từ Email (FR-A10)",
+)
+async def reset_password(
+    payload: ResetPasswordRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """Kiểm tra token còn hiệu lực, cập nhật mật khẩu mới và thu hồi các phiên cũ."""
+    _, ip_address = _extract_client_meta(request)
+    await auth_service.reset_password_with_token(
+        session=session,
+        payload=payload,
+        request_id=request.headers.get("x-request-id"),
+        ip_address=ip_address,
+    )
+    return MessageResponse(
+        message="Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới."
+    )
+
+
+@router.get(
+    "/audit-logs",
+    response_model=PaginatedAuditLogsResponse,
+    summary="Xem nhật ký Audit Log các thao tác bảo mật/quản trị (Chỉ ADMIN - FR-H01)",
+)
+async def get_audit_logs(
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=20, ge=1, le=100),
+    action: Optional[str] = Query(default=None),
+    target_user_id: Optional[UUID] = Query(default=None),
+    _: User = Depends(require_roles("ADMIN")),
+    session: AsyncSession = Depends(get_db),
+) -> PaginatedAuditLogsResponse:
+    """Tra cứu nhật ký bất biến các thao tác phân quyền, khóa tài khoản và đổi mật khẩu."""
+    return await auth_service.list_audit_logs(
+        session=session,
+        page=page,
+        size=size,
+        action=action,
+        target_user_id=target_user_id,
+    )
+
+
+@router.get(
+    "/internal/users/{user_id}",
+    response_model=InternalUserLookupResponse,
+    summary="Tra cứu thông tin user nội bộ giữa các Enterprise Services (Yêu cầu X-Internal-Key)",
+)
+async def internal_lookup_user(
+    user_id: UUID,
+    session: AsyncSession = Depends(get_db),
+) -> InternalUserLookupResponse:
+    """Phục vụ Order/Reporting Service lấy thông tin khách hàng/nhân sự mà không JOIN chéo DB."""
+    return await auth_service.get_internal_user_lookup(session, user_id)

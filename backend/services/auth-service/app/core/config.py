@@ -36,6 +36,19 @@ class Settings(BaseSettings):
         "569426721711-6ub3hgomi74b201otif6cpe3oq53s5fj.apps.googleusercontent.com"
     )
 
+    # Bảo mật chống Brute-force (FR-A07)
+    MAX_FAILED_LOGIN_ATTEMPTS: int = 5
+    ACCOUNT_LOCK_MINUTES: int = 15
+
+    # Cấu hình Gmail SMTP cho Quên mật khẩu (FR-A10)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_NAME: str = "Fresh Orchard FruitStore"
+    FRONTEND_URL: str = "http://localhost:4200"
+    RESET_TOKEN_EXPIRE_MINUTES: int = 15
+
     # Mật khẩu khởi tạo dữ liệu mẫu (chỉ dùng khi chạy script seed tường minh)
     SEED_ADMIN_PASSWORD: str = "Admin@123"
     SEED_MANAGER_PASSWORD: str = "Manager@123"
