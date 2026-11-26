@@ -203,6 +203,55 @@
   position: relative;
 }
 
+.card-visual.has-photo {
+  padding: 0;
+  height: 184px;
+  background-color: var(--color-surface);
+  justify-content: space-between;
+}
+
+.card-visual.has-photo .category-chip {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+}
+
+.card-visual.has-photo .origin-chip {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  z-index: 2;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.product-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.modal-photo-wrap {
+  width: 100%;
+  height: 200px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  margin-bottom: 14px;
+  background-color: var(--color-surface-hover);
+}
+
+.modal-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .category-chip {
   padding: 3px 10px;
   border-radius: var(--radius-full);

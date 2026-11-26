@@ -186,9 +186,18 @@
                     <span class="sku-badge">{{ prod.sku }}</span>
                   </td>
                   <td>
-                    <div class="prod-name">{{ prod.name }}</div>
-                    <div class="prod-origin">
-                      Xuất xứ: {{ prod.origin || 'Chưa cập nhật' }}
+                    <div class="prod-cell-flex">
+                      @if (getProductThumbUrl(prod); as thumbUrl) {
+                        <img [src]="thumbUrl" [alt]="prod.name" class="prod-thumb" loading="lazy" />
+                      } @else {
+                        <div class="prod-thumb-placeholder" aria-hidden="true">🌿</div>
+                      }
+                      <div>
+                        <div class="prod-name">{{ prod.name }}</div>
+                        <div class="prod-origin">
+                          Xuất xứ: {{ prod.origin || 'Chưa cập nhật' }}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td>
@@ -471,6 +480,36 @@
             placeholder="Ghi chú độ ngọt, quy cách đóng gói hoặc hướng dẫn bảo quản..."
             class="textarea-input"
           ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="prod-image-input" class="field-label">Hình ảnh đại diện sản phẩm (WEBP, JPG, PNG ≤ 5MB)</label>
+          <div class="image-upload-box">
+            @if (imagePreviewUrl(); as previewUrl) {
+              <img [src]="previewUrl" alt="Xem trước ảnh sản phẩm" class="image-preview-thumb" />
+            } @else {
+              <div class="image-preview-empty">Chưa có ảnh</div>
+            }
+            <div class="image-upload-controls">
+              <input
+                id="prod-image-input"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                (change)="onImageFileSelected($event)"
+                class="file-input"
+              />
+              @if (imagePreviewUrl()) {
+                <button
+                  type="button"
+                  class="ghost-btn small-btn"
+                  [disabled]="isDeletingImage()"
+                  (click)="removeProductImageInModal()"
+                >
+                  {{ isDeletingImage() ? 'Đang xóa...' : (selectedImageFile() ? 'Bỏ chọn ảnh mới' : 'Xóa ảnh hiện tại') }}
+                </button>
+              }
+            </div>
+          </div>
         </div>
 
         <div class="modal-footer">

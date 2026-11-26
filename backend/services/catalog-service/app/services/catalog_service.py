@@ -13,17 +13,20 @@ Nhiệm vụ: Xử lý toàn bộ logic nghiệp vụ của Catalog Service (FR-
 """
 
 import math
+from pathlib import Path
 import re
 import unicodedata
 from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
+from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.deps import Actor
 from app.core.exceptions import AppError
-from app.models.catalog import Category, PriceHistory, Product
+from app.models.catalog import Category, PriceHistory, Product, ProductImage
 from app.repositories.category_repository import CategoryRepository
 from app.repositories.product_repository import ProductRepository
 from app.schemas.catalog import (
@@ -435,4 +438,169 @@ async def get_product_price_history(
             message="Không tìm thấy sản phẩm cần tra cứu lịch sử giá.",
         )
     return await prod_repo.list_price_history(product_id)
+
+
+# =============================================================================
+# 3. QUẢN LÝ HÌNH ẢNH SẢN PHẨM NGOÀI DATABASE (FR-B07, NFR-K04)
+# =============================================================================
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MEDIA_URL_PREFIX = "/api/v1/catalog/media/products/"
+
+
+def _get_storage_dir() -> Path:
+    """Trả về đường dẫn tuyệt đối thư mục lưu ảnh sản phẩm (tự tạo nếu chưa có)."""
+    storage_path = Path(settings.PRODUCT_STORAGE_DIR)
+    if not storage_path.is_absolute():
+        service_root = Path(__file__).resolve().parents[2]
+        storage_path = (service_root / storage_path).resolve()
+    storage_path.mkdir(parents=True, exist_ok=True)
+    return storage_path
+
+
+def _is_valid_image_magic(data: bytes, ext: str) -> bool:
+    """Kiểm tra magic bytes đầu file để chống giả mạo đuôi ảnh."""
+    if ext in {".jpg", ".jpeg"}:
+        return data.startswith(b"\xff\xd8\xff")
+    if ext == ".png":
+        return data.startswith(b"\x89PNG\r\n\x1a\n")
+    if ext == ".webp":
+        return len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+    return False
+
+
+def _remove_local_media_file(image_url: str) -> None:
+    """Xóa file ảnh vật lý cũ nếu URL thuộc thư mục media nội bộ."""
+    if not image_url.startswith(MEDIA_URL_PREFIX):
+        return
+    filename = Path(image_url.removeprefix(MEDIA_URL_PREFIX)).name
+    if not filename:
+        return
+    target = (_get_storage_dir() / filename).resolve()
+    if target.parent == _get_storage_dir() and target.is_file():
+        target.unlink(missing_ok=True)
+
+
+async def upload_product_image(
+    session: AsyncSession, product_id: UUID, file: UploadFile
+) -> ProductResponse:
+    """
+    Upload hoặc thay thế ảnh đại diện chính của sản phẩm (FR-B07):
+    - Chấp nhận `.webp`, `.jpg`, `.jpeg`, `.png` (<= 5 MB), kiểm tra MIME và magic bytes.
+    - Lưu file vật lý ngoài DB (`storage/products/<uuid><ext>`), chỉ lưu `image_url` trong `product_images`.
+    """
+    prod_repo = ProductRepository(session)
+    product = await prod_repo.get_by_id(product_id)
+    if not product:
+        raise AppError(
+            status_code=404,
+            code="PRODUCT_NOT_FOUND",
+            message="Không tìm thấy sản phẩm để tải ảnh lên.",
+        )
+
+    raw_name = file.filename or ""
+    ext = Path(raw_name).suffix.lower()
+    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+        raise AppError(
+            status_code=422,
+            code="INVALID_IMAGE_EXTENSION",
+            message="Chỉ chấp nhận ảnh định dạng .webp, .jpg, .jpeg hoặc .png.",
+        )
+
+    content_type = (file.content_type or "").lower()
+    if content_type and content_type not in ALLOWED_IMAGE_MIME_TYPES:
+        raise AppError(
+            status_code=422,
+            code="INVALID_IMAGE_MIME",
+            message="Loại tệp hình ảnh không hợp lệ (chỉ hỗ trợ WEBP, JPG, PNG).",
+        )
+
+    content = await file.read()
+    if not content:
+        raise AppError(
+            status_code=422,
+            code="EMPTY_IMAGE_FILE",
+            message="Tệp hình ảnh bị rỗng.",
+        )
+    if len(content) > settings.MAX_IMAGE_SIZE_BYTES:
+        raise AppError(
+            status_code=422,
+            code="IMAGE_TOO_LARGE",
+            message="Kích thước hình ảnh vượt quá giới hạn 5 MB.",
+        )
+    if not _is_valid_image_magic(content, ext):
+        raise AppError(
+            status_code=422,
+            code="INVALID_IMAGE_CONTENT",
+            message="Nội dung tệp không đúng định dạng ảnh WEBP/JPG/PNG.",
+        )
+
+    existing_images = await prod_repo.list_product_images(product_id)
+    for img in existing_images:
+        _remove_local_media_file(img.image_url)
+
+    filename = f"{uuid4().hex}{ext}"
+    file_path = _get_storage_dir() / filename
+    file_path.write_bytes(content)
+
+    await prod_repo.delete_product_images(product_id)
+    await prod_repo.add_product_image(
+        ProductImage(
+            product_id=product_id,
+            image_url=f"{MEDIA_URL_PREFIX}{filename}",
+            alt_text=product.name[:200],
+            is_primary=True,
+            sort_order=0,
+        )
+    )
+    await session.commit()
+    session.expire_all()
+
+    updated = await prod_repo.get_by_id(product_id)
+    return to_product_response(updated)  # type: ignore[arg-type]
+
+
+async def delete_product_image(
+    session: AsyncSession, product_id: UUID
+) -> ProductResponse:
+    """Xóa ảnh đại diện của sản phẩm khỏi DB và file vật lý trên ổ đĩa (FR-B07)."""
+    prod_repo = ProductRepository(session)
+    product = await prod_repo.get_by_id(product_id)
+    if not product:
+        raise AppError(
+            status_code=404,
+            code="PRODUCT_NOT_FOUND",
+            message="Không tìm thấy sản phẩm cần xóa ảnh.",
+        )
+
+    existing_images = await prod_repo.list_product_images(product_id)
+    for img in existing_images:
+        _remove_local_media_file(img.image_url)
+
+    await prod_repo.delete_product_images(product_id)
+    await session.commit()
+    session.expire_all()
+
+    updated = await prod_repo.get_by_id(product_id)
+    return to_product_response(updated)  # type: ignore[arg-type]
+
+
+def resolve_product_media_file(filename: str) -> Path:
+    """Kiểm tra an toàn tên file (chống path traversal) và trả về đường dẫn file ảnh thật."""
+    safe_name = Path(filename).name
+    if safe_name != filename or Path(safe_name).suffix.lower() not in ALLOWED_IMAGE_EXTENSIONS:
+        raise AppError(
+            status_code=404,
+            code="IMAGE_NOT_FOUND",
+            message="Không tìm thấy hình ảnh sản phẩm.",
+        )
+    storage_dir = _get_storage_dir()
+    target = (storage_dir / safe_name).resolve()
+    if target.parent != storage_dir or not target.is_file():
+        raise AppError(
+            status_code=404,
+            code="IMAGE_NOT_FOUND",
+            message="Không tìm thấy hình ảnh sản phẩm.",
+        )
+    return target
 
