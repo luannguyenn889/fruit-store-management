@@ -361,3 +361,69 @@ async def test_reserve_rejects_exceeding_available_quantity():
         await reserve_fn(payload)
 
     assert lot.quantity_reserved == Decimal("7.000")
+@pytest.mark.asyncio
+async def test_5_6_concurrent_race_for_last_1kg():
+    import asyncio
+    from uuid import uuid4
+
+    product_id = uuid4()
+    lot = SimpleNamespace(
+        id=uuid4(),
+        lot_code="LOT-LAST-1KG",
+        product_id=product_id,
+        quantity_remaining=Decimal("1.000"),
+        quantity_reserved=Decimal("0.000"),
+        status="AVAILABLE",
+        expiry_date=date.today() + timedelta(days=5),
+        created_at=1,
+    )
+    lock = asyncio.Lock()
+
+    async def try_reserve_1kg(order_idx: int) -> bool:
+        async with lock:
+            avail = lot.quantity_remaining - lot.quantity_reserved
+            if avail < Decimal("1.000"):
+                return False
+            await asyncio.sleep(0.01)
+            lot.quantity_reserved += Decimal("1.000")
+            return True
+
+    results = await asyncio.gather(try_reserve_1kg(1), try_reserve_1kg(2))
+    assert results.count(True) == 1
+    assert results.count(False) == 1
+    assert lot.quantity_reserved == Decimal("1.000")
+
+
+@pytest.mark.asyncio
+async def test_5_8_expire_overdue_reservations_restores_stock():
+    now = datetime.now(timezone.utc)
+    lot = SimpleNamespace(
+        id=uuid4(),
+        lot_code="LOT-TTL-01",
+        product_id=uuid4(),
+        quantity_remaining=Decimal("10.000"),
+        quantity_reserved=Decimal("4.000"),
+        status="AVAILABLE",
+    )
+    overdue_res = SimpleNamespace(
+        id=uuid4(),
+        status="ACTIVE",
+        expires_at=now - timedelta(minutes=5),
+        items=[SimpleNamespace(lot_id=lot.id, quantity=Decimal("4.000"))],
+    )
+
+    class _ExpireRepo:
+        async def get_overdue_reservations(self, _now):
+            return [overdue_res]
+
+        async def get_by_id(self, lid, for_update: bool = False):
+            _ = for_update
+            return lot if lid == lot.id else None
+
+    service = LotService(_DummySession())
+    service.repo = _ExpireRepo()
+
+    resp = await service.expire_overdue_reservations()
+    assert resp.expired_count == 1
+    assert overdue_res.status == "EXPIRED"
+    assert lot.quantity_reserved == Decimal("0.000")
