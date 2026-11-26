@@ -405,13 +405,13 @@ async def test_forgot_and_reset_password_flow_and_internal_lookup(
     client: AsyncClient,
 ) -> None:
     """
-    Kiểm tra FR-A10 (Quên mật khẩu qua Gmail SMTP, token dùng 1 lần),
+    Kiểm tra FR-A10 (Quên mật khẩu qua Gmail SMTP với mã OTP 6 chữ số, dùng 1 lần),
     FR-H01 (Audit Log cho ADMIN) và endpoint nội bộ `/internal/users/{id}`.
     """
-    captured_links: list[str] = []
+    captured_otps: list[str] = []
 
-    def _fake_send_email(to_email: str, full_name: str, reset_link: str) -> None:
-        captured_links.append(reset_link)
+    def _fake_send_email(to_email: str, full_name: str, otp_code: str) -> None:
+        captured_otps.append(otp_code)
 
     with patch(
         "app.api.v1.auth.send_password_reset_email",
@@ -423,7 +423,8 @@ async def test_forgot_and_reset_password_flow_and_internal_lookup(
             json={"email": "manager@fruitstore.com"},
         )
         assert forgot_resp.status_code == 200
-        assert len(captured_links) == 1
+        assert len(captured_otps) == 1
+        assert len(captured_otps[0]) == 6 and captured_otps[0].isdigit()
 
         # Email không tồn tại vẫn trả 200 để chống dò email
         unknown_resp = await client.post(
@@ -432,21 +433,43 @@ async def test_forgot_and_reset_password_flow_and_internal_lookup(
             json={"email": "khongtontai@fruitstore.com"},
         )
         assert unknown_resp.status_code == 200
-        assert len(captured_links) == 1
+        assert len(captured_otps) == 1
 
-    raw_token = captured_links[0].split("token=")[-1]
+    otp_code = captured_otps[0]
+
+    # Sai mã OTP -> 400
+    wrong_otp_resp = await client.post(
+        "/api/v1/auth/reset-password",
+        headers=INTERNAL_HEADERS,
+        json={
+            "email": "manager@fruitstore.com",
+            "otp_code": "000000" if otp_code != "000000" else "999999",
+            "new_password": "NewManager@2026",
+        },
+    )
+    assert wrong_otp_resp.status_code == 400
+
+    # Đúng email + đúng OTP 6 chữ số -> 200
     reset_resp = await client.post(
         "/api/v1/auth/reset-password",
         headers=INTERNAL_HEADERS,
-        json={"token": raw_token, "new_password": "NewManager@2026"},
+        json={
+            "email": "manager@fruitstore.com",
+            "otp_code": otp_code,
+            "new_password": "NewManager@2026",
+        },
     )
     assert reset_resp.status_code == 200
 
-    # Token chỉ dùng được 1 lần
+    # Mã OTP chỉ dùng được 1 lần
     reuse_resp = await client.post(
         "/api/v1/auth/reset-password",
         headers=INTERNAL_HEADERS,
-        json={"token": raw_token, "new_password": "Another@2026"},
+        json={
+            "email": "manager@fruitstore.com",
+            "otp_code": otp_code,
+            "new_password": "Another@2026",
+        },
     )
     assert reuse_resp.status_code == 400
     assert reuse_resp.json()["code"] == "INVALID_OR_EXPIRED_RESET_TOKEN"

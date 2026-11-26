@@ -168,13 +168,15 @@ export class AuthService {
     });
   }
 
-  /** Đặt lại mật khẩu mới bằng token nhận từ Email (FR-A10) */
+  /** Đặt lại mật khẩu mới bằng mã OTP 6 chữ số nhận từ Email (FR-A10) */
   resetPassword(
-    token: string,
+    email: string,
+    otpCode: string,
     newPassword: string
   ): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.apiUrl}/reset-password`, {
-      token: token.trim(),
+      email: email.trim(),
+      otp_code: otpCode.trim(),
       new_password: newPassword
     });
   }
