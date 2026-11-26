@@ -12,11 +12,11 @@ Nhiệm vụ: Thực hiện toàn bộ truy vấn SQLAlchemy 2.0 Async đối v�
 from decimal import Decimal
 from typing import List, Optional, Tuple
 from uuid import UUID
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.catalog import PriceHistory, Product
+from app.models.catalog import PriceHistory, Product, ProductImage
 
 
 class ProductRepository:
@@ -150,4 +150,21 @@ class ProductRepository:
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def list_product_images(self, product_id: UUID) -> List[ProductImage]:
+        """Lấy danh sách hình ảnh hiện có của sản phẩm."""
+        stmt = select(ProductImage).where(ProductImage.product_id == product_id)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def delete_product_images(self, product_id: UUID) -> None:
+        """Xóa toàn bộ bản ghi ảnh hiện có của sản phẩm trước khi thay ảnh đại diện mới."""
+        stmt = delete(ProductImage).where(ProductImage.product_id == product_id)
+        await self.session.execute(stmt)
+
+    async def add_product_image(self, image: ProductImage) -> ProductImage:
+        """Thêm bản ghi đường dẫn ảnh sản phẩm vào `product_images`."""
+        self.session.add(image)
+        await self.session.flush()
+        return image
 

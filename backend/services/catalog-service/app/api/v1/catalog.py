@@ -12,7 +12,8 @@ from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import Actor, require_roles, verify_internal_key
@@ -243,4 +244,46 @@ async def get_price_history(
     """Lấy danh sách lịch sử biến động giá bán của một sản phẩm."""
     records = await catalog_service.get_product_price_history(session, product_id)
     return [PriceHistoryResponse.model_validate(r) for r in records]
+
+
+# =============================================================================
+# 4. ENDPOINTS HÌNH ẢNH SẢN PHẨM (PRODUCT IMAGES - FR-B07, NFR-K04)
+# =============================================================================
+@router.post(
+    "/products/{product_id}/image",
+    response_model=ProductResponse,
+    summary="Tải lên hoặc thay thế ảnh đại diện sản phẩm (Chỉ Manager, Admin)",
+)
+async def upload_product_image(
+    product_id: UUID,
+    file: UploadFile = File(...),
+    session: AsyncSession = Depends(get_db),
+    _: Actor = Depends(require_roles("MANAGER", "ADMIN")),
+) -> ProductResponse:
+    """Lưu file ảnh ngoài DB (`storage/products/`) và cập nhật `product_images`."""
+    return await catalog_service.upload_product_image(session, product_id, file)
+
+
+@router.delete(
+    "/products/{product_id}/image",
+    response_model=ProductResponse,
+    summary="Xóa ảnh đại diện sản phẩm (Chỉ Manager, Admin)",
+)
+async def delete_product_image(
+    product_id: UUID,
+    session: AsyncSession = Depends(get_db),
+    _: Actor = Depends(require_roles("MANAGER", "ADMIN")),
+) -> ProductResponse:
+    """Xóa ảnh đại diện của sản phẩm khỏi DB và ổ đĩa."""
+    return await catalog_service.delete_product_image(session, product_id)
+
+
+@router.get(
+    "/media/products/{filename}",
+    summary="Phục vụ tệp hình ảnh sản phẩm (Công khai cho Storefront)",
+)
+async def get_product_media_file(filename: str) -> FileResponse:
+    """Trả về file ảnh tĩnh từ thư mục `storage/products/`."""
+    file_path = catalog_service.resolve_product_media_file(filename)
+    return FileResponse(path=file_path)
 

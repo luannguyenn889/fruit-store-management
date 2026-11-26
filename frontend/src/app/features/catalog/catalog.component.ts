@@ -86,6 +86,11 @@ export class CatalogComponent implements OnInit {
   formStatus: ProductStatus = 'ACTIVE';
   formDescription = '';
 
+  // Hình ảnh đại diện sản phẩm (FR-B07)
+  selectedImageFile = signal<File | null>(null);
+  imagePreviewUrl = signal<string | null>(null);
+  isDeletingImage = signal(false);
+
   // Modal Điều chỉnh Đơn giá & Lịch sử Giá (PriceHistory - FR-B06, BR-07)
   showPriceModal = signal(false);
   selectedProductForPrice = signal<Product | null>(null);
@@ -243,6 +248,8 @@ export class CatalogComponent implements OnInit {
     this.formStorageCondition = 'COOL_2_8C';
     this.formStatus = 'ACTIVE';
     this.formDescription = '';
+    this.selectedImageFile.set(null);
+    this.imagePreviewUrl.set(null);
 
     this.showProductModal.set(true);
   }
@@ -261,12 +268,102 @@ export class CatalogComponent implements OnInit {
     this.formStorageCondition = product.storage_condition;
     this.formStatus = product.status;
     this.formDescription = product.description || '';
+    this.selectedImageFile.set(null);
+    this.imagePreviewUrl.set(this.getProductThumbUrl(product));
 
     this.showProductModal.set(true);
   }
 
   closeProductModal(): void {
+    this.selectedImageFile.set(null);
+    this.imagePreviewUrl.set(null);
     this.showProductModal.set(false);
+  }
+
+  getProductThumbUrl(product: Product): string | null {
+    const primary = product.images?.find(i => i.is_primary) ?? product.images?.[0];
+    return this.catalogService.resolveProductImageUrl(primary?.image_url);
+  }
+
+  onImageFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    const allowedExt = /\.(jpe?g|png|webp)$/i;
+    if (!allowedTypes.has(file.type) && !allowedExt.test(file.name)) {
+      this.toastService.error('Chỉ chấp nhận ảnh định dạng .webp, .jpg, .jpeg hoặc .png.');
+      input.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      this.toastService.error('Dung lượng ảnh tối đa là 5 MB.');
+      input.value = '';
+      return;
+    }
+
+    this.selectedImageFile.set(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.imagePreviewUrl.set(typeof reader.result === 'string' ? reader.result : null);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  removeProductImageInModal(): void {
+    if (this.selectedImageFile()) {
+      this.selectedImageFile.set(null);
+      const targetId = this.editingProductId();
+      const existing = targetId ? this.products().find(p => p.id === targetId) : null;
+      this.imagePreviewUrl.set(existing ? this.getProductThumbUrl(existing) : null);
+      return;
+    }
+
+    const targetId = this.editingProductId();
+    if (!targetId) return;
+
+    this.isDeletingImage.set(true);
+    this.catalogService.deleteProductImage(targetId).subscribe({
+      next: () => {
+        this.isDeletingImage.set(false);
+        this.imagePreviewUrl.set(null);
+        this.loadProducts(this.currentPage());
+        this.toastService.success('Đã xóa ảnh đại diện của sản phẩm.');
+      },
+      error: err => {
+        this.isDeletingImage.set(false);
+        this.toastService.error(err.error?.message || 'Không thể xóa ảnh sản phẩm.');
+      }
+    });
+  }
+
+  private finalizeProductSave(product: Product, successMessage: string): void {
+    const file = this.selectedImageFile();
+    if (!file) {
+      this.isSavingProduct.set(false);
+      this.closeProductModal();
+      this.loadProducts(this.currentPage());
+      this.toastService.success(successMessage);
+      return;
+    }
+
+    this.catalogService.uploadProductImage(product.id, file).subscribe({
+      next: () => {
+        this.isSavingProduct.set(false);
+        this.closeProductModal();
+        this.loadProducts(this.currentPage());
+        this.toastService.success(`${successMessage} (kèm ảnh minh họa).`);
+      },
+      error: err => {
+        this.isSavingProduct.set(false);
+        this.closeProductModal();
+        this.loadProducts(this.currentPage());
+        this.toastService.warning(
+          `${successMessage}, nhưng tải ảnh thất bại: ${err.error?.message || 'Vui lòng thử lại.'}`
+        );
+      }
+    });
   }
 
   submitProductForm(): void {
@@ -310,10 +407,8 @@ export class CatalogComponent implements OnInit {
         })
         .subscribe({
           next: created => {
-            this.isSavingProduct.set(false);
-            this.showProductModal.set(false);
-            this.loadProducts(this.currentPage());
-            this.toastService.success(
+            this.finalizeProductSave(
+              created,
               `Đã thêm sản phẩm "${created.name}" (${created.sku}) thành công.`
             );
           },
@@ -343,10 +438,10 @@ export class CatalogComponent implements OnInit {
         })
         .subscribe({
           next: updated => {
-            this.isSavingProduct.set(false);
-            this.showProductModal.set(false);
-            this.loadProducts(this.currentPage());
-            this.toastService.success(`Đã cập nhật thông tin sản phẩm "${updated.name}".`);
+            this.finalizeProductSave(
+              updated,
+              `Đã cập nhật thông tin sản phẩm "${updated.name}".`
+            );
           },
           error: err => {
             this.isSavingProduct.set(false);

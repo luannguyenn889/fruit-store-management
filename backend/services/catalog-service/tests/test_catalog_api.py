@@ -294,3 +294,96 @@ async def test_full_catalog_and_price_history_lifecycle(
     assert detail_resp.status_code == 200
     assert detail_resp.json()["status"] == "INACTIVE"
 
+
+@pytest.mark.asyncio
+async def test_product_image_upload_serve_and_delete(
+    client: AsyncClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Kiểm thử FR-B07 (NFR-K04):
+    - Upload ảnh hợp lệ (.png / .jpg) lưu file vật lý ngoài DB và trả URL `/api/v1/catalog/media/products/<file>`.
+    - Truy cập GET media URL trả 200 với đúng nội dung ảnh.
+    - Chặn STAFF upload (403) và chặn định dạng không hợp lệ / giả mạo nội dung (422).
+    - Xóa ảnh sản phẩm dọn sạch bản ghi DB và file vật lý trên ổ đĩa.
+    """
+    monkeypatch.setattr(settings, "PRODUCT_STORAGE_DIR", str(tmp_path))
+
+    cat_resp = await client.post(
+        "/api/v1/catalog/categories",
+        headers=MANAGER_HEADERS,
+        json={"name": "Trái cây có ảnh"},
+    )
+    assert cat_resp.status_code == 201
+    category_id = cat_resp.json()["id"]
+
+    prod_resp = await client.post(
+        "/api/v1/catalog/products",
+        headers=MANAGER_HEADERS,
+        json={
+            "category_id": category_id,
+            "sku": "IMG-TEST-01",
+            "name": "Cam sành test ảnh",
+            "unit": "kg",
+            "price": "45000.00",
+        },
+    )
+    assert prod_resp.status_code == 201
+    product_id = prod_resp.json()["id"]
+
+    fake_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+
+    # STAFF không có quyền upload ảnh -> 403
+    staff_upload = await client.post(
+        f"/api/v1/catalog/products/{product_id}/image",
+        headers=STAFF_HEADERS,
+        files={"file": ("cam.png", fake_png, "image/png")},
+    )
+    assert staff_upload.status_code == 403
+
+    # File giả mạo đuôi .svg -> 422 INVALID_IMAGE_EXTENSION
+    bad_ext = await client.post(
+        f"/api/v1/catalog/products/{product_id}/image",
+        headers=MANAGER_HEADERS,
+        files={"file": ("cam.svg", b"<svg></svg>", "image/svg+xml")},
+    )
+    assert bad_ext.status_code == 422
+    assert bad_ext.json()["code"] == "INVALID_IMAGE_EXTENSION"
+
+    # File đuôi .jpg nhưng nội dung không phải JPEG magic bytes -> 422 INVALID_IMAGE_CONTENT
+    bad_magic = await client.post(
+        f"/api/v1/catalog/products/{product_id}/image",
+        headers=MANAGER_HEADERS,
+        files={"file": ("cam.jpg", b"not-a-jpeg", "image/jpeg")},
+    )
+    assert bad_magic.status_code == 422
+    assert bad_magic.json()["code"] == "INVALID_IMAGE_CONTENT"
+
+    # Upload PNG hợp lệ -> 200 và có images[0].image_url
+    ok_upload = await client.post(
+        f"/api/v1/catalog/products/{product_id}/image",
+        headers=MANAGER_HEADERS,
+        files={"file": ("cam.png", fake_png, "image/png")},
+    )
+    assert ok_upload.status_code == 200
+    images = ok_upload.json()["images"]
+    assert len(images) == 1
+    image_url = images[0]["image_url"]
+    assert image_url.startswith("/api/v1/catalog/media/products/")
+
+    # GET public media trả 200 đúng bytes đã upload
+    media_resp = await client.get(image_url, headers=PUBLIC_HEADERS)
+    assert media_resp.status_code == 200
+    assert media_resp.content == fake_png
+
+    # Xóa ảnh -> images == [] và file vật lý bị xóa
+    del_resp = await client.delete(
+        f"/api/v1/catalog/products/{product_id}/image",
+        headers=MANAGER_HEADERS,
+    )
+    assert del_resp.status_code == 200
+    assert del_resp.json()["images"] == []
+
+    media_after_del = await client.get(image_url, headers=PUBLIC_HEADERS)
+    assert media_after_del.status_code == 404
+
+

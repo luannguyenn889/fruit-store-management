@@ -90,14 +90,24 @@
       <div class="product-grid">
         @for (p of products(); track p.id) {
           <article class="product-card">
-            <div class="card-visual">
+            <div class="card-visual" [class.has-photo]="!!getProductImageUrl(p)">
               <span class="category-chip">{{ p.category_name || 'Trái cây tươi' }}</span>
-              <div class="visual-emblem" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
-                  <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-                </svg>
-              </div>
+              @if (getProductImageUrl(p); as imgUrl) {
+                <img
+                  [src]="imgUrl"
+                  [alt]="p.name"
+                  class="product-photo"
+                  loading="lazy"
+                  (error)="markImageFailed(p.id)"
+                />
+              } @else {
+                <div class="visual-emblem" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+                    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+                  </svg>
+                </div>
+              }
               <span class="origin-chip">{{ p.origin || 'Việt Nam' }}</span>
             </div>
 
@@ -167,6 +177,11 @@
       </div>
 
       <div class="modal-body">
+        @if (getProductImageUrl(prod); as modalImgUrl) {
+          <div class="modal-photo-wrap">
+            <img [src]="modalImgUrl" [alt]="prod.name" class="modal-photo" (error)="markImageFailed(prod.id)" />
+          </div>
+        }
         <div class="modal-price-banner">
           <span class="modal-price">{{ formatVnd(prod.price) }}</span>
           <span class="modal-unit">/ {{ formatUnitLabel(prod.unit) }}</span>

@@ -33,6 +33,14 @@ export interface CategoryCreatePayload {
   is_active?: boolean;
 }
 
+export interface ProductImage {
+  id: string;
+  image_url: string;
+  alt_text?: string | null;
+  is_primary: boolean;
+  sort_order: number;
+}
+
 export interface Product {
   id: string;
   category_id: string;
@@ -47,6 +55,7 @@ export interface Product {
   storage_condition: StorageCondition;
   description?: string | null;
   status: ProductStatus;
+  images?: ProductImage[];
   created_at: string;
   updated_at: string;
 }
@@ -197,6 +206,35 @@ export class CatalogService {
     return this.http.get<PriceHistoryRecord[]>(
       `${this.apiUrl}/products/${productId}/price-history`
     );
+  }
+
+  /** Tải lên hoặc thay thế ảnh đại diện sản phẩm (Chỉ MANAGER / ADMIN) */
+  uploadProductImage(productId: string, file: File): Observable<Product> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<Product>(
+      `${this.apiUrl}/products/${productId}/image`,
+      formData,
+      { headers: this.authService.getAuthHeaders() }
+    );
+  }
+
+  /** Xóa ảnh đại diện sản phẩm (Chỉ MANAGER / ADMIN) */
+  deleteProductImage(productId: string): Observable<Product> {
+    return this.http.delete<Product>(
+      `${this.apiUrl}/products/${productId}/image`,
+      { headers: this.authService.getAuthHeaders() }
+    );
+  }
+
+  /** Chuyển đổi đường dẫn ảnh tương đối `/api/v1/...` thành URL đầy đủ qua Gateway */
+  resolveProductImageUrl(imageUrl?: string | null): string | null {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('data:')) {
+      return imageUrl;
+    }
+    const gatewayOrigin = environment.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
+    return `${gatewayOrigin}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
   }
 }
 

@@ -26,6 +26,10 @@ class CatalogSettings(BaseSettings):
     # Khóa nội bộ kiểm tra request đến từ API Gateway
     INTERNAL_API_KEY: str = "fruitstore_internal_gateway_key_2026"
 
+    # Lưu trữ hình ảnh sản phẩm ngoài Database (FR-B07, NFR-K04)
+    PRODUCT_STORAGE_DIR: str = "storage/products"
+    MAX_IMAGE_SIZE_BYTES: int = 5 * 1024 * 1024
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

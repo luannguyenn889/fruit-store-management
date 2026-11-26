@@ -48,6 +48,7 @@ export class ShopComponent implements OnInit {
   loadError = signal('');
 
   selectedProduct = signal<Product | null>(null);
+  failedImageIds = signal<Set<string>>(new Set());
 
   constructor(private catalogService: CatalogService) {}
 
@@ -117,6 +118,20 @@ export class ShopComponent implements OnInit {
 
   closeProductDetail(): void {
     this.selectedProduct.set(null);
+  }
+
+  getProductImageUrl(product: Product): string | null {
+    if (this.failedImageIds().has(product.id)) return null;
+    const primary = product.images?.find(i => i.is_primary) ?? product.images?.[0];
+    return this.catalogService.resolveProductImageUrl(primary?.image_url);
+  }
+
+  markImageFailed(productId: string): void {
+    this.failedImageIds.update(prev => {
+      const next = new Set(prev);
+      next.add(productId);
+      return next;
+    });
   }
 
   formatVnd(priceStr: string | number): string {
