@@ -1,0 +1,171 @@
+<!-- ==========================================================================
+     MODULE: features/audit-logs/audit-logs.component.html
+     NHIỆM VỤ: Giao diện tra cứu Nhật ký kiểm toán (Audit Log) cho ADMIN (/audit-logs).
+     ========================================================================== -->
+
+<app-admin-layout sectionTitle="Hệ thống" pageTitle="Nhật ký kiểm toán (Audit Log)">
+  <div class="audit-content">
+    <section class="page-header-row">
+      <div>
+        <h1 class="page-title">Nhật ký Kiểm toán Bảo mật &amp; Quản trị</h1>
+        <p class="page-subtitle">
+          Ghi nhận bất biến (chỉ đọc) mọi thao tác phân quyền RBAC, tạo nhân sự, khóa/mở khóa tài khoản,
+          cảnh báo brute-force và đặt lại mật khẩu qua OTP (FR-H01, NFR-S11).
+        </p>
+      </div>
+      <button type="button" class="secondary-btn" (click)="loadLogs(currentPage())">
+        Làm mới
+      </button>
+    </section>
+
+    <!-- FILTER BAR -->
+    <section class="card-panel">
+      <div class="filter-grid">
+        <div class="form-group">
+          <label for="audit-action-filter" class="field-label">Loại hành động</label>
+          <select
+            id="audit-action-filter"
+            class="field-input"
+            [(ngModel)]="filterAction"
+            (change)="applyFilters()"
+          >
+            @for (opt of actionOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="audit-target-input" class="field-label">Lọc theo ID tài khoản đích (UUID)</label>
+          <input
+            id="audit-target-input"
+            type="text"
+            class="field-input"
+            [(ngModel)]="filterTargetUserId"
+            placeholder="Nhập UUID tài khoản cần truy vết..."
+            (keyup.enter)="applyFilters()"
+          />
+        </div>
+
+        <div class="filter-actions">
+          <button type="button" class="primary-btn" (click)="applyFilters()">
+            Lọc dữ liệu
+          </button>
+          <button type="button" class="secondary-btn" (click)="resetFilters()">
+            Xóa lọc
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABLE PANEL -->
+    <section class="card-panel">
+      <div class="table-toolbar">
+        <span>Tổng cộng <b>{{ totalLogs() }}</b> bản ghi nhật ký</span>
+        <span>Trang {{ currentPage() }} / {{ totalPages() }}</span>
+      </div>
+
+      @if (isLoading()) {
+        <app-skeleton-loader variant="table" [rows]="6" [columns]="6" />
+      } @else if (loadError()) {
+        <div class="state-box">
+          <p class="state-title">Không thể tải nhật ký kiểm toán</p>
+          <p class="state-desc">{{ loadError() }}</p>
+          <button type="button" class="primary-btn" (click)="loadLogs(currentPage())">
+            Thử lại
+          </button>
+        </div>
+      } @else if (logs().length === 0) {
+        <div class="state-box">
+          <p class="state-title">Chưa có bản ghi Audit Log phù hợp</p>
+          <p class="state-desc">
+            Hãy thử xóa bộ lọc hoặc thực hiện các thao tác quản trị để hệ thống ghi nhận nhật ký mới.
+          </p>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Thời gian</th>
+                <th>Hành động</th>
+                <th>Người thực hiện</th>
+                <th>Tài khoản đích</th>
+                <th>Thay đổi (Cũ → Mới)</th>
+                <th>Truy vết (Request / IP)</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of logs(); track item.id) {
+                <tr>
+                  <td style="white-space: nowrap;">
+                    {{ item.created_at | date: 'dd/MM/yyyy HH:mm:ss' }}
+                  </td>
+                  <td>
+                    <span class="action-badge" [attr.data-tone]="getActionTone(item.action)">
+                      {{ getActionLabel(item.action) }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="mono-text" [title]="item.actor_user_id || 'Hệ thống'">
+                      {{ shortId(item.actor_user_id) }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (item.target_user_id) {
+                      <button
+                        type="button"
+                        class="id-link-btn"
+                        [title]="'Lọc theo tài khoản: ' + item.target_user_id"
+                        (click)="filterByTargetUser(item.target_user_id)"
+                      >
+                        {{ shortId(item.target_user_id) }}
+                      </button>
+                    } @else {
+                      <span class="mono-text">—</span>
+                    }
+                  </td>
+                  <td>
+                    <div class="diff-cell">
+                      @if (item.old_value) {
+                        <div class="diff-row">
+                          <span class="diff-tag">Cũ:</span>
+                          <span class="diff-old">{{ formatPayload(item.old_value) }}</span>
+                        </div>
+                      }
+                      @if (item.new_value) {
+                        <div class="diff-row">
+                          <span class="diff-tag">Mới:</span>
+                          <span class="diff-new">{{ formatPayload(item.new_value) }}</span>
+                        </div>
+                      }
+                      @if (!item.old_value && !item.new_value) {
+                        <span class="mono-text">—</span>
+                      }
+                    </div>
+                  </td>
+                  <td>
+                    <div class="mono-text" [title]="item.request_id || ''">
+                      Req: {{ shortId(item.request_id) }}
+                    </div>
+                    <div class="mono-text">
+                      IP: {{ item.ip_address || '—' }}
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <app-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="totalPages()"
+          [totalItems]="totalLogs()"
+          [pageSize]="pageSize()"
+          (pageChange)="onPageChange($event)"
+        />
+      }
+    </section>
+  </div>
+</app-admin-layout>

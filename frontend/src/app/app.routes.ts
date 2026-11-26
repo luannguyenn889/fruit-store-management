@@ -17,6 +17,7 @@ import { CatalogComponent } from './features/catalog/catalog.component';
 import { InventoryComponent } from './features/inventory/inventory.component';
 import { ProcurementComponent } from './features/procurement/procurement.component';
 import { UsersComponent } from './features/users/users.component';
+import { AuditLogsComponent } from './features/audit-logs/audit-logs.component';
 import { ShopComponent } from './features/shop/shop.component';
 import { CustomerProfileComponent } from './features/profile/customer-profile.component';
 import { authGuard, homeRedirectGuard } from './core/guards/auth.guard';
@@ -55,6 +56,11 @@ export const routes: Routes = [
     path: 'users',
     component: UsersComponent,
     canActivate: [authGuard, roleGuard(INTERNAL_ROLES)]
+  },
+  {
+    path: 'audit-logs',
+    component: AuditLogsComponent,
+    canActivate: [authGuard, roleGuard(['ADMIN'])]
   },
   { path: '**', redirectTo: '' }
 ];
