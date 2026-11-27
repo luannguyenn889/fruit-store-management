@@ -29,7 +29,7 @@ export interface ChatMessageItem {
   providedIn: 'root'
 })
 export class ChatbotService {
-  private readonly apiUrl = `${environment.apiUrl}/chatbot`;
+  private readonly apiUrl = `${environment.apiBaseUrl}/chatbot`;
 
   constructor(
     private http: HttpClient,
