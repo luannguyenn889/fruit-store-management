@@ -222,7 +222,14 @@ async def handle_chat(
             client_factory=client_factory,
         )
     except Exception as exc:
-        reply_text = f"Xin lỗi, Trợ lý AI đang gặp gián đoạn kết nối Gemini ({type(exc).__name__}). Vui lòng thử lại sau."
+        err_str = str(exc)
+        if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+            reply_text = (
+                "Trợ lý AI tạm thời vượt hạn mức miễn phí (429 RESOURCE_EXHAUSTED) của Gemini. "
+                "Vui lòng thử lại sau ít phút hoặc đổi `GEMINI_MODEL` / API key mới."
+            )
+        else:
+            reply_text = f"Xin lỗi, Trợ lý AI đang gặp gián đoạn kết nối Gemini ({type(exc).__name__}). Vui lòng thử lại sau."
         tools_used = []
 
     await repo.add_message(

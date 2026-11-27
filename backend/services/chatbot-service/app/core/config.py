@@ -27,7 +27,7 @@ class ChatbotSettings(BaseSettings):
     INVENTORY_SERVICE_URL: str = "http://localhost:8003"
 
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3.5-flash"
 
     model_config = SettingsConfigDict(
         env_file=".env",
