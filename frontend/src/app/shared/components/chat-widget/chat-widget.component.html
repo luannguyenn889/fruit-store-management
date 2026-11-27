@@ -1,0 +1,96 @@
+@if (!isHidden()) {
+  <div class="chat-widget-root">
+    @if (isOpen()) {
+      <section class="chat-panel" aria-label="Trợ lý AI FruitStore">
+        <header class="chat-header">
+          <div>
+            <div class="chat-title">Trợ lý AI FruitStore</div>
+            <div class="chat-subtitle">Tư vấn trái cây &amp; kiểm tra tồn kho thật</div>
+          </div>
+          <div class="chat-header-actions">
+            <button
+              type="button"
+              class="icon-btn"
+              title="Cuộc trò chuyện mới"
+              (click)="resetConversation()"
+            >
+              ↺
+            </button>
+            <button
+              type="button"
+              class="icon-btn"
+              title="Đóng"
+              (click)="toggleOpen()"
+            >
+              ✕
+            </button>
+          </div>
+        </header>
+
+        <div class="chat-messages">
+          @for (msg of messages(); track $index) {
+            <div class="msg-row" [class.user]="msg.role === 'user'">
+              <div class="msg-bubble">
+                <div class="msg-text">{{ msg.content }}</div>
+                @if (msg.toolsUsed && msg.toolsUsed.length > 0) {
+                  <div class="msg-tools">
+                    Đã tra cứu: {{ msg.toolsUsed.join(', ') }}
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          @if (isSending()) {
+            <div class="msg-row">
+              <div class="msg-bubble typing">Đang tra cứu dữ liệu...</div>
+            </div>
+          }
+        </div>
+
+        @if (suggestions().length > 0 && !isSending()) {
+          <div class="chat-suggestions">
+            @for (s of suggestions(); track s) {
+              <button type="button" class="chip-btn" (click)="sendQuickPrompt(s)">
+                {{ s }}
+              </button>
+            }
+          </div>
+        }
+
+        <form class="chat-input-bar" (ngSubmit)="send()">
+          <input
+            type="text"
+            class="chat-input"
+            name="chatInput"
+            [(ngModel)]="inputText"
+            placeholder="Nhập câu hỏi (vd: Xoài còn hàng không?)..."
+            [disabled]="isSending()"
+          />
+          <button
+            type="submit"
+            class="send-btn"
+            [disabled]="isSending() || !inputText.trim()"
+          >
+            Gửi
+          </button>
+        </form>
+      </section>
+    }
+
+    <button
+      type="button"
+      class="chat-fab"
+      (click)="toggleOpen()"
+      [attr.aria-label]="isOpen() ? 'Đóng Trợ lý AI' : 'Mở Trợ lý AI'"
+    >
+      @if (isOpen()) {
+        ✕
+      } @else {
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      }
+    </button>
+  </div>
+}

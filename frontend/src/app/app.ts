@@ -7,10 +7,11 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ToastContainerComponent } from './shared/components/toast-container/toast-container.component';
+import { ChatWidgetComponent } from './shared/components/chat-widget/chat-widget.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ToastContainerComponent],
+  imports: [RouterOutlet, ToastContainerComponent, ChatWidgetComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
