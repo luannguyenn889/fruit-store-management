@@ -1,0 +1,183 @@
+"""
+Module: tests.test_chatbot_api (Chatbot Service)
+Nhiệm vụ: Kiểm thử tự động cho Chatbot Service (:8007):
+          1. Chặn truy cập trực tiếp thiếu `X-Internal-Key` (403 FORBIDDEN_DIRECT_ACCESS).
+          2. Alembic migration `upgrade head -> downgrade -1 -> upgrade head` độc lập.
+          3. Hội thoại AI với Gemini Function Calling (mock Gemini client + ToolExecutor):
+             - Khách hàng hỏi tồn kho -> gọi `check_stock`, lưu `chat_sessions` + `chat_messages`.
+             - Phân quyền tool: `CUSTOMER`/`GUEST` bị chặn `get_expiring_lots`; `MANAGER` được phép.
+          4. Xem danh sách phiên & lịch sử tin nhắn yêu cầu đăng nhập (401 nếu thiếu `X-User-Id`).
+"""
+
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, Dict, List
+from uuid import uuid4
+
+import pytest
+import pytest_asyncio
+from alembic import command
+from alembic.config import Config
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+
+from app.core.config import settings
+from app.db.base import Base
+from app.db.session import get_db
+from app.main import app
+from app.services import chatbot_service
+from app.services.tool_executor import ToolExecutor
+
+CUSTOMER_ID = str(uuid4())
+MANAGER_ID = str(uuid4())
+
+GUEST_HEADERS = {"X-Internal-Key": settings.INTERNAL_API_KEY}
+CUSTOMER_HEADERS = {
+    "X-Internal-Key": settings.INTERNAL_API_KEY,
+    "X-User-Id": CUSTOMER_ID,
+    "X-User-Role": "CUSTOMER",
+}
+MANAGER_HEADERS = {
+    "X-Internal-Key": settings.INTERNAL_API_KEY,
+    "X-User-Id": MANAGER_ID,
+    "X-User-Role": "MANAGER",
+}
+
+
+@pytest_asyncio.fixture
+async def client(tmp_path: Path):
+    db_file = tmp_path / "test_chatbot.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_file}", future=True)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    session_maker = async_sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+    async def override_get_db():
+        async with session_maker() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as async_client:
+        yield async_client
+
+    app.dependency_overrides.clear()
+    await engine.dispose()
+
+
+def test_alembic_upgrade_and_downgrade(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    db_file = tmp_path / "alembic_chatbot.db"
+    monkeypatch.setattr(settings, "DATABASE_URL", f"sqlite+aiosqlite:///{db_file}")
+
+    service_root = Path(__file__).resolve().parents[1]
+    alembic_cfg = Config(str(service_root / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(service_root / "alembic"))
+
+    command.upgrade(alembic_cfg, "head")
+    command.downgrade(alembic_cfg, "-1")
+    command.upgrade(alembic_cfg, "head")
+
+
+@pytest.mark.asyncio
+async def test_missing_internal_key_rejected(client: AsyncClient) -> None:
+    resp = await client.post("/api/v1/chatbot/chat", json={"message": "Xin chào"})
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "FORBIDDEN_DIRECT_ACCESS"
+
+
+@pytest.mark.asyncio
+async def test_chat_with_gemini_function_calling_and_history(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-gemini-key-for-test")
+
+    # Mock ToolExecutor.execute để không phụ thuộc server :8002/:8003 đang chạy
+    async def fake_execute(self: ToolExecutor, name: str, args: Dict[str, Any]) -> Dict[str, Any]:
+        if name == "check_stock":
+            return {
+                "items": [
+                    {
+                        "product_name": "Xoài cát Hòa Lộc",
+                        "available_quantity": "25.000",
+                        "status": "CON_HANG",
+                    }
+                ]
+            }
+        return {"ok": True}
+
+    monkeypatch.setattr(ToolExecutor, "execute", fake_execute)
+
+    # Mock Gemini client: lượt 1 gọi tool check_stock, lượt 2 trả văn bản tổng hợp
+    calls = {"count": 0}
+
+    class FakeModels:
+        def generate_content(self, model: str, contents: List[Any], config: Any) -> Any:
+            calls["count"] += 1
+            if calls["count"] == 1:
+                return SimpleNamespace(
+                    function_calls=[
+                        SimpleNamespace(name="check_stock", args={"keyword": "Xoài"})
+                    ],
+                    candidates=[SimpleNamespace(content=None)],
+                    text=None,
+                )
+            return SimpleNamespace(
+                function_calls=[],
+                candidates=[],
+                text="Xoài cát Hòa Lộc hiện còn 25.000 kg tại cửa hàng ạ!",
+            )
+
+    monkeypatch.setattr(
+        chatbot_service,
+        "_default_client_factory",
+        lambda _key: SimpleNamespace(models=FakeModels()),
+    )
+
+    resp = await client.post(
+        "/api/v1/chatbot/chat",
+        headers=CUSTOMER_HEADERS,
+        json={"message": "Xoài cát Hòa Lộc còn hàng không?"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "25.000 kg" in body["reply"]
+    assert body["tools_used"] == ["check_stock"]
+    session_id = body["session_id"]
+
+    # Kiểm tra lịch sử phiên & tin nhắn đã lưu vào DB
+    sessions_resp = await client.get("/api/v1/chatbot/sessions", headers=CUSTOMER_HEADERS)
+    assert sessions_resp.status_code == 200
+    assert len(sessions_resp.json()) == 1
+    assert sessions_resp.json()[0]["id"] == session_id
+
+    msgs_resp = await client.get(
+        f"/api/v1/chatbot/sessions/{session_id}/messages", headers=CUSTOMER_HEADERS
+    )
+    assert msgs_resp.status_code == 200
+    assert len(msgs_resp.json()) == 2
+    assert msgs_resp.json()[0]["role"] == "user"
+    assert msgs_resp.json()[1]["role"] == "assistant"
+
+
+@pytest.mark.asyncio
+async def test_tool_rbac_blocks_expiring_lots_for_customer() -> None:
+    executor = ToolExecutor(user_role="CUSTOMER", user_id=CUSTOMER_ID, request_id="req-1")
+    res = await executor.execute("get_expiring_lots", {"days": 3})
+    assert res["error"] == "FORBIDDEN"
+
+
+@pytest.mark.asyncio
+async def test_sessions_endpoint_requires_login(client: AsyncClient) -> None:
+    resp = await client.get("/api/v1/chatbot/sessions", headers=GUEST_HEADERS)
+    assert resp.status_code == 401
+    assert resp.json()["code"] == "UNAUTHORIZED"

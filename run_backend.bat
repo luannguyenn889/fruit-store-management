@@ -21,8 +21,11 @@ start "FruitStore - Catalog Service (:8002)" cmd /k "color 0E && cd /d "%~dp0bac
 REM 3. Khoi dong Inventory Service (Cong 8003)
 start "FruitStore - Inventory Service (:8003)" cmd /k "color 0D && cd /d "%~dp0backend\services\inventory-service" && "%~dp0backend\.venv\Scripts\python.exe" -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8003"
 
-REM 4. Khoi dong API Gateway (Cong 8000)
+REM 4. Khoi dong Chatbot Service (Cong 8007)
+start "FruitStore - Chatbot Service (:8007)" cmd /k "color 0F && cd /d "%~dp0backend\services\chatbot-service" && "%~dp0backend\.venv\Scripts\python.exe" -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8007"
+
+REM 5. Khoi dong API Gateway (Cong 8000)
 start "FruitStore - API Gateway (:8000)" cmd /k "color 0A && cd /d "%~dp0backend\gateway" && "%~dp0backend\.venv\Scripts\python.exe" -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
 
-echo Da mo 4 cua so Terminal cho Auth (:8001), Catalog (:8002), Inventory (:8003) va API Gateway (:8000).
+echo Da mo 5 cua so Terminal cho Auth (:8001), Catalog (:8002), Inventory (:8003), Chatbot (:8007) va API Gateway (:8000).
 exit /b

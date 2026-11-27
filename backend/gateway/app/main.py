@@ -125,6 +125,10 @@ def is_public_route(method: str, path: str) -> bool:
         return True
     if upper_method == "GET" and normalized_path == "/api/v1/inventory/health":
         return True
+    if upper_method == "GET" and normalized_path == "/api/v1/chatbot/health":
+        return True
+    if upper_method == "POST" and normalized_path == "/api/v1/chatbot/chat":
+        return True
     return False
 
 
@@ -216,6 +220,7 @@ async def forward_request(
     request: Request,
     upstream_base_url: str,
     service_label: str,
+    timeout: float = 15.0,
 ) -> Response:
     """Thực hiện kiểm tra JWT, làm sạch header và proxy request tới service đích."""
     request_id = request.headers.get("x-request-id") or str(uuid4())
@@ -287,10 +292,10 @@ async def forward_request(
                 url=target_url,
                 headers=upstream_headers,
                 content=body,
-                timeout=15.0,
+                timeout=timeout,
             )
         else:
-            async with httpx.AsyncClient(timeout=15.0) as temp_client:
+            async with httpx.AsyncClient(timeout=timeout) as temp_client:
                 upstream_resp = await temp_client.request(
                     method=request.method,
                     url=target_url,
@@ -393,5 +398,21 @@ async def proxy_inventory(path: str, request: Request) -> Response:  # noqa: ARG
         request=request,
         upstream_base_url=settings.INVENTORY_SERVICE_URL,
         service_label="inventory-service",
+    )
+
+
+@app.api_route(
+    "/api/v1/chatbot/{path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    tags=["Chatbot Proxy"],
+    summary="Chuyển tiếp các yêu cầu Trợ lý AI sang Chatbot Service (:8007)",
+)
+async def proxy_chatbot(path: str, request: Request) -> Response:  # noqa: ARG001
+    """Định tuyến mọi request `/api/v1/chatbot/*` sang `chatbot-service`."""
+    return await forward_request(
+        request=request,
+        upstream_base_url=settings.CHATBOT_SERVICE_URL,
+        service_label="chatbot-service",
+        timeout=30.0,
     )
 
