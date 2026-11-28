@@ -19,7 +19,7 @@ import httpx
 import jwt
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.core.config import settings
 
@@ -57,8 +57,10 @@ PUBLIC_AUTH_PATHS = {
 # Bộ đếm Rate Limit trượt 60 giây theo IP (NFR-S04)
 RATE_LIMIT_WINDOW_SECONDS = 60
 RATE_LIMIT_MAX_ATTEMPTS = 5
+CHATBOT_RATE_LIMIT_MAX = 15
 _FAILED_LOGIN_BUCKETS: Dict[str, Deque[float]] = defaultdict(deque)
 _FORGOT_PASSWORD_BUCKETS: Dict[str, Deque[float]] = defaultdict(deque)
+_CHATBOT_BUCKETS: Dict[str, Deque[float]] = defaultdict(deque)
 
 
 def _extract_client_ip(request: Request) -> str:
@@ -74,11 +76,13 @@ def _prune_bucket(bucket: Deque[float], now: float) -> None:
         bucket.popleft()
 
 
-def _is_rate_limited(buckets: Dict[str, Deque[float]], key: str) -> bool:
+def _is_rate_limited(
+    buckets: Dict[str, Deque[float]], key: str, max_attempts: int = RATE_LIMIT_MAX_ATTEMPTS
+) -> bool:
     now = time.monotonic()
     bucket = buckets[key]
     _prune_bucket(bucket, now)
-    return len(bucket) >= RATE_LIMIT_MAX_ATTEMPTS
+    return len(bucket) >= max_attempts
 
 
 def _record_rate_event(buckets: Dict[str, Deque[float]], key: str) -> None:
@@ -127,7 +131,10 @@ def is_public_route(method: str, path: str) -> bool:
         return True
     if upper_method == "GET" and normalized_path == "/api/v1/chatbot/health":
         return True
-    if upper_method == "POST" and normalized_path == "/api/v1/chatbot/chat":
+    if upper_method == "POST" and normalized_path in {
+        "/api/v1/chatbot/chat",
+        "/api/v1/chatbot/chat/stream",
+    }:
         return True
     return False
 
@@ -268,6 +275,23 @@ async def forward_request(
             return limited
         _record_rate_event(_FORGOT_PASSWORD_BUCKETS, client_ip)
 
+    if upper_method == "POST" and normalized_path in {
+        "/api/v1/chatbot/chat",
+        "/api/v1/chatbot/chat/stream",
+    }:
+        if _is_rate_limited(_CHATBOT_BUCKETS, client_ip, CHATBOT_RATE_LIMIT_MAX):
+            limited = JSONResponse(
+                status_code=429,
+                content={
+                    "code": "RATE_LIMIT_EXCEEDED",
+                    "message": "Bạn đang gửi tin nhắn quá nhanh. Vui lòng chờ 1 phút rồi thử lại.",
+                    "details": {"retry_after_seconds": RATE_LIMIT_WINDOW_SECONDS},
+                },
+            )
+            limited.headers["X-Request-ID"] = request_id
+            return limited
+        _record_rate_event(_CHATBOT_BUCKETS, client_ip)
+
     require_token = not is_public_route(request.method, request.url.path)
 
     claims, auth_error = verify_jwt_from_request(request, require_token=require_token)
@@ -401,6 +425,66 @@ async def proxy_inventory(path: str, request: Request) -> Response:  # noqa: ARG
     )
 
 
+async def forward_sse_stream(
+    request: Request,
+    upstream_base_url: str,
+    service_label: str,
+    timeout: float = 45.0,
+) -> Response:
+    """Chuyển tiếp SSE stream từ Chatbot Service về Client không buffer toàn bộ body."""
+    request_id = request.headers.get("X-Request-ID") or str(uuid4())
+    normalized_path = request.url.path.rstrip("/") or "/"
+    client_ip = _extract_client_ip(request)
+
+    if _is_rate_limited(_CHATBOT_BUCKETS, client_ip, CHATBOT_RATE_LIMIT_MAX):
+        limited = JSONResponse(
+            status_code=429,
+            content={
+                "code": "RATE_LIMIT_EXCEEDED",
+                "message": "Bạn đang gửi tin nhắn quá nhanh. Vui lòng chờ 1 phút rồi thử lại.",
+                "details": {"retry_after_seconds": RATE_LIMIT_WINDOW_SECONDS},
+            },
+        )
+        limited.headers["X-Request-ID"] = request_id
+        return limited
+    _record_rate_event(_CHATBOT_BUCKETS, client_ip)
+
+    claims, auth_error = verify_jwt_from_request(request, require_token=False)
+    if auth_error is not None:
+        auth_error.headers["X-Request-ID"] = request_id
+        return auth_error
+
+    upstream_headers = build_upstream_headers(request, request_id, claims)
+    target_url = f"{upstream_base_url.rstrip('/')}{normalized_path}"
+    body = await request.body()
+
+    async def event_stream():
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as stream_client:
+                async with stream_client.stream(
+                    method=request.method,
+                    url=target_url,
+                    headers=upstream_headers,
+                    content=body,
+                ) as upstream_resp:
+                    async for chunk in upstream_resp.aiter_bytes():
+                        if chunk:
+                            yield chunk
+        except httpx.RequestError as exc:
+            yield (
+                f'event: error\ndata: {{"message": "Dịch vụ {service_label} gián đoạn: {exc}"}}\n\n'
+            ).encode("utf-8")
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Request-ID": request_id,
+        },
+    )
+
+
 @app.api_route(
     "/api/v1/chatbot/{path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -409,6 +493,13 @@ async def proxy_inventory(path: str, request: Request) -> Response:  # noqa: ARG
 )
 async def proxy_chatbot(path: str, request: Request) -> Response:  # noqa: ARG001
     """Định tuyến mọi request `/api/v1/chatbot/*` sang `chatbot-service`."""
+    if request.method.upper() == "POST" and path.rstrip("/") == "chat/stream":
+        return await forward_sse_stream(
+            request=request,
+            upstream_base_url=settings.CHATBOT_SERVICE_URL,
+            service_label="chatbot-service",
+            timeout=45.0,
+        )
     return await forward_request(
         request=request,
         upstream_base_url=settings.CHATBOT_SERVICE_URL,

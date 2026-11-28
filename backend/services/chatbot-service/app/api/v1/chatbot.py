@@ -1,11 +1,12 @@
 """
 Module: app.api.v1.chatbot (Chatbot Service)
-Nhiệm vụ: Cung cấp các REST endpoint cho Trợ lý AI FruitStore (`/api/v1/chatbot/*`).
+Nhiệm vụ: Cung cấp các REST & SSE endpoint cho Trợ lý AI FruitStore (`/api/v1/chatbot/*`).
 """
 
 from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, Header, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import (
@@ -33,7 +34,7 @@ router = APIRouter(
 @router.post(
     "/chat",
     response_model=ChatResponse,
-    summary="Gửi tin nhắn trò chuyện với Trợ lý AI Gemini",
+    summary="Gửi tin nhắn trò chuyện với Trợ lý AI Gemini (JSON)",
 )
 async def send_chat_message(
     payload: ChatRequest,
@@ -41,13 +42,49 @@ async def send_chat_message(
     x_request_id: Optional[str] = Header(default=None, alias="X-Request-ID"),
     db: AsyncSession = Depends(get_db),
 ) -> ChatResponse:
-    """Tiếp nhận câu hỏi tiếng Việt, gọi Gemini + Tool (Catalog/Inventory) và trả câu trả lời."""
+    """Tiếp nhận câu hỏi/ảnh/ngữ cảnh, gọi Gemini + Tool và trả JSON đầy đủ."""
     return await chatbot_service.handle_chat(
         db=db,
         actor=actor,
         message=payload.message,
         session_id=payload.session_id,
         request_id=x_request_id or "chatbot-req",
+        current_route=payload.current_route,
+        product_id=payload.product_id,
+        image_base64=payload.image_base64,
+        image_mime_type=payload.image_mime_type,
+    )
+
+
+@router.post(
+    "/chat/stream",
+    summary="Gửi tin nhắn trò chuyện với Trợ lý AI Gemini (SSE Streaming)",
+)
+async def stream_chat_message(
+    payload: ChatRequest,
+    actor: ChatActor = Depends(get_optional_actor),
+    x_request_id: Optional[str] = Header(default=None, alias="X-Request-ID"),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """Streaming phản hồi theo thời gian thực qua Server-Sent Events (`text/event-stream`)."""
+    generator = chatbot_service.stream_chat(
+        db=db,
+        actor=actor,
+        message=payload.message,
+        session_id=payload.session_id,
+        request_id=x_request_id or "chatbot-req",
+        current_route=payload.current_route,
+        product_id=payload.product_id,
+        image_base64=payload.image_base64,
+        image_mime_type=payload.image_mime_type,
+    )
+    return StreamingResponse(
+        generator,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

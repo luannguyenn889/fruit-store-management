@@ -1,6 +1,7 @@
 """
 Module: app.schemas.chat (Chatbot Service)
-Nhiệm vụ: Định nghĩa schema Pydantic v2 cho yêu cầu/phản hồi trò chuyện và lịch sử phiên chat.
+Nhiệm vụ: Định nghĩa schema Pydantic v2 cho yêu cầu/phản hồi trò chuyện,
+          ảnh đa phương thức (Vision), ngữ cảnh trang, thẻ sản phẩm gợi ý và lịch sử phiên.
 """
 
 from datetime import datetime
@@ -10,10 +11,26 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ChatRequest(BaseModel):
-    """Payload gửi tin nhắn tới Trợ lý AI."""
+    """Payload gửi tin nhắn tới Trợ lý AI (hỗ trợ văn bản, ảnh và ngữ cảnh trang)."""
 
     message: str = Field(..., min_length=1, max_length=2000, description="Nội dung câu hỏi")
     session_id: Optional[UUID] = Field(default=None, description="ID phiên chat hiện tại")
+    current_route: Optional[str] = Field(default=None, max_length=200, description="Đường dẫn trang đang xem")
+    product_id: Optional[UUID] = Field(default=None, description="ID sản phẩm đang xem (nếu có)")
+    image_base64: Optional[str] = Field(default=None, description="Ảnh trái cây mã hóa base64")
+    image_mime_type: Optional[str] = Field(default=None, max_length=64, description="MIME ảnh (image/jpeg, image/png, image/webp)")
+
+
+class RecommendedProduct(BaseModel):
+    """Thẻ sản phẩm tóm tắt kèm ảnh & tồn kho để render trực tiếp trong khung chat."""
+
+    id: str
+    sku: Optional[str] = None
+    name: str
+    unit: Optional[str] = None
+    price: Optional[str] = None
+    image_url: Optional[str] = None
+    available_quantity: Optional[str] = None
 
 
 class ChatMessageResponse(BaseModel):
@@ -34,6 +51,7 @@ class ChatResponse(BaseModel):
     session_id: UUID
     reply: str
     tools_used: List[str] = Field(default_factory=list)
+    recommended_products: List[RecommendedProduct] = Field(default_factory=list)
     suggestions: List[str] = Field(default_factory=list)
 
 

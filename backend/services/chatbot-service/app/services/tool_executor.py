@@ -1,13 +1,15 @@
 """
 Module: app.services.tool_executor (Chatbot Service)
 Nhiệm vụ: Thực thi các Tool (Function Calling) gọi sang `Catalog Service` (:8002)
-          và `Inventory Service` (:8003) qua REST API nội bộ theo đúng RBAC.
+          và `Inventory Service` (:8003) qua REST API nội bộ theo đúng RBAC,
+          đồng thời thu thập danh sách `RecommendedProduct` để render thẻ sản phẩm có ảnh trên UI.
 """
 
 from typing import Any, Dict, List, Optional
 import httpx
 
 from app.core.config import settings
+from app.schemas.chat import RecommendedProduct
 
 INTERNAL_INVENTORY_ROLES = {"WAREHOUSE", "MANAGER", "ADMIN"}
 
@@ -19,6 +21,12 @@ class ToolExecutor:
         self.user_role = user_role.upper()
         self.user_id = user_id or "00000000-0000-0000-0000-000000000000"
         self.request_id = request_id
+        self._collected: Dict[str, RecommendedProduct] = {}
+
+    @property
+    def recommended_products(self) -> List[RecommendedProduct]:
+        """Trả về tối đa 4 thẻ sản phẩm vừa được tra cứu trong lượt hội thoại."""
+        return list(self._collected.values())[:4]
 
     def _internal_headers(self, role_override: Optional[str] = None) -> Dict[str, str]:
         return {
@@ -27,6 +35,28 @@ class ToolExecutor:
             "X-User-Role": role_override or self.user_role,
             "X-Request-ID": self.request_id,
         }
+
+    def _upsert_product_card(self, raw: Dict[str, Any]) -> None:
+        pid = str(raw.get("id") or raw.get("product_id") or "").strip()
+        name = str(raw.get("name") or raw.get("product_name") or "").strip()
+        if not pid or not name:
+            return
+        images = raw.get("images") or []
+        first_image = images[0].get("image_url") if images and isinstance(images[0], dict) else raw.get("image_url")
+        existing = self._collected.get(pid)
+        self._collected[pid] = RecommendedProduct(
+            id=pid,
+            sku=raw.get("sku") or (existing.sku if existing else None),
+            name=name,
+            unit=raw.get("unit") or (existing.unit if existing else None),
+            price=str(raw["price"]) if raw.get("price") is not None else (existing.price if existing else None),
+            image_url=first_image or (existing.image_url if existing else None),
+            available_quantity=(
+                str(raw["available_quantity"])
+                if raw.get("available_quantity") is not None
+                else (existing.available_quantity if existing else None)
+            ),
+        )
 
     async def execute(self, name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         """Điều phối lời gọi tool từ Gemini sang đúng endpoint REST tương ứng."""
@@ -66,19 +96,21 @@ class ToolExecutor:
             if resp.status_code != 200:
                 return {"error": f"CATALOG_HTTP_{resp.status_code}"}
             data = resp.json()
-            items = [
-                {
-                    "id": p.get("id"),
-                    "sku": p.get("sku"),
-                    "name": p.get("name"),
-                    "unit": p.get("unit"),
-                    "price": p.get("price"),
-                    "origin": p.get("origin"),
-                    "shelf_life_days": p.get("shelf_life_days"),
-                    "storage_condition": p.get("storage_condition"),
-                }
-                for p in data.get("items", [])
-            ]
+            items = []
+            for p in data.get("items", []):
+                self._upsert_product_card(p)
+                items.append(
+                    {
+                        "id": p.get("id"),
+                        "sku": p.get("sku"),
+                        "name": p.get("name"),
+                        "unit": p.get("unit"),
+                        "price": p.get("price"),
+                        "origin": p.get("origin"),
+                        "shelf_life_days": p.get("shelf_life_days"),
+                        "storage_condition": p.get("storage_condition"),
+                    }
+                )
             return {"total": data.get("total", len(items)), "products": items}
         except httpx.RequestError as exc:
             return {"error": "CATALOG_UNAVAILABLE", "detail": str(exc)}
@@ -94,15 +126,15 @@ class ToolExecutor:
                 )
             if resp.status_code != 200:
                 return {"error": f"CATALOG_HTTP_{resp.status_code}"}
-            return resp.json()
+            detail = resp.json()
+            self._upsert_product_card(detail)
+            return detail
         except httpx.RequestError as exc:
             return {"error": "CATALOG_UNAVAILABLE", "detail": str(exc)}
 
     async def _check_stock(
         self, product_id: Optional[str] = None, keyword: Optional[str] = None
     ) -> Dict[str, Any]:
-        # Inventory /stock/summary yêu cầu quyền STAFF/WAREHOUSE/MANAGER/ADMIN;
-        # Chatbot đọc hộ số lượng tồn khả dụng để trả lời khách hàng (chỉ trả số lượng, không lộ giá vốn/NCC).
         try:
             async with httpx.AsyncClient(timeout=8.0) as client:
                 resp = await client.get(
@@ -123,8 +155,10 @@ class ToolExecutor:
                     if kw in str(p.get("product_name", "")).lower()
                     or kw in str(p.get("sku", "")).lower()
                 ]
-            return {
-                "items": [
+            result_items = []
+            for p in products[:15]:
+                self._upsert_product_card(p)
+                result_items.append(
                     {
                         "product_id": p.get("product_id"),
                         "sku": p.get("sku"),
@@ -134,9 +168,8 @@ class ToolExecutor:
                         if float(p.get("available_quantity") or 0) > 0
                         else "HET_HANG",
                     }
-                    for p in products[:15]
-                ]
-            }
+                )
+            return {"items": result_items}
         except httpx.RequestError as exc:
             return {"error": "INVENTORY_UNAVAILABLE", "detail": str(exc)}
 

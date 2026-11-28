@@ -181,3 +181,90 @@ async def test_sessions_endpoint_requires_login(client: AsyncClient) -> None:
     resp = await client.get("/api/v1/chatbot/sessions", headers=GUEST_HEADERS)
     assert resp.status_code == 401
     assert resp.json()["code"] == "UNAUTHORIZED"
+
+
+@pytest.mark.asyncio
+async def test_sse_stream_recommended_products_and_model_fallback(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-gemini-key-for-test")
+    monkeypatch.setattr(settings, "GEMINI_MODEL", "gemini-primary-test")
+    monkeypatch.setattr(settings, "GEMINI_FALLBACK_MODELS", "gemini-fallback-test")
+
+    # Mock ToolExecutor.execute và đẩy 1 sản phẩm vào _collected
+    async def fake_execute(self: ToolExecutor, name: str, args: Dict[str, Any]) -> Dict[str, Any]:
+        self._upsert_product_card(
+            {
+                "id": "2b17e54e-9e0d-42b9-814a-2153f452b9b9",
+                "sku": "XOAI-HL-01",
+                "name": "Xoài cát Hòa Lộc",
+                "unit": "kg",
+                "price": "70000.00",
+                "image_url": "/api/v1/catalog/media/products/xoai.jpg",
+                "available_quantity": "12.500",
+            }
+        )
+        return {"ok": True}
+
+    monkeypatch.setattr(ToolExecutor, "execute", fake_execute)
+
+    seen_models: List[str] = []
+
+    class FakeModelsWithFallback:
+        def generate_content(self, model: str, contents: List[Any], config: Any) -> Any:
+            seen_models.append(model)
+            if model == "gemini-primary-test":
+                raise RuntimeError("429 RESOURCE_EXHAUSTED quota exceeded")
+            if len(seen_models) == 2:
+                return SimpleNamespace(
+                    function_calls=[
+                        SimpleNamespace(name="search_products", args={"query": "Xoài"})
+                    ],
+                    candidates=[SimpleNamespace(content=None)],
+                    text=None,
+                )
+            return SimpleNamespace(
+                function_calls=[],
+                candidates=[],
+                text="Xoài cát Hòa Lộc giá 70.000đ/kg, còn 12.5 kg.",
+            )
+
+    monkeypatch.setattr(
+        chatbot_service,
+        "_default_client_factory",
+        lambda _key: SimpleNamespace(models=FakeModelsWithFallback()),
+    )
+
+    resp = await client.post(
+        "/api/v1/chatbot/chat/stream",
+        headers=CUSTOMER_HEADERS,
+        json={
+            "message": "Loại này giá sao?",
+            "current_route": "/shop",
+        },
+    )
+    assert resp.status_code == 200
+    assert "text/event-stream" in resp.headers["content-type"]
+    body_text = resp.text
+    assert "event: status" in body_text
+    assert "event: delta" in body_text
+    assert "event: done" in body_text
+    assert "XOAI-HL-01" in body_text
+    assert "gemini-primary-test" in seen_models
+    assert "gemini-fallback-test" in seen_models
+
+
+@pytest.mark.asyncio
+async def test_vision_rejects_invalid_mime_type(client: AsyncClient) -> None:
+    resp = await client.post(
+        "/api/v1/chatbot/chat",
+        headers=GUEST_HEADERS,
+        json={
+            "message": "Nhận diện giúp tôi",
+            "image_base64": "aGVsbG8=",
+            "image_mime_type": "image/svg+xml",
+        },
+    )
+    assert resp.status_code == 422
+    assert resp.json()["code"] == "INVALID_IMAGE_MIME"
+
