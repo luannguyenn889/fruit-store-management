@@ -24,11 +24,16 @@ class ChatRepository:
         return result.scalar_one_or_none()
 
     async def create_session(
-        self, user_id: Optional[UUID], user_role: str, title: str
+        self,
+        user_id: Optional[UUID],
+        user_role: str,
+        title: str,
+        guest_token: Optional[str] = None,
     ) -> ChatSession:
         chat_session = ChatSession(
             user_id=user_id,
             user_role=user_role,
+            guest_token=guest_token,
             title=title[:180],
         )
         self.session.add(chat_session)
@@ -49,13 +54,16 @@ class ChatRepository:
     async def list_messages(
         self, session_id: UUID, limit: int = 30
     ) -> List[ChatMessage]:
+        """Lấy `limit` tin nhắn gần nhất theo thứ tự thời gian tăng dần."""
         result = await self.session.execute(
             select(ChatMessage)
             .where(ChatMessage.session_id == session_id)
-            .order_by(ChatMessage.created_at.asc())
+            .order_by(desc(ChatMessage.created_at))
             .limit(limit)
         )
-        return list(result.scalars().all())
+        rows = list(result.scalars().all())
+        rows.reverse()
+        return rows
 
     async def add_message(
         self,
@@ -63,12 +71,14 @@ class ChatRepository:
         role: str,
         content: str,
         tool_calls_json: Optional[str] = None,
+        token_usage_json: Optional[str] = None,
     ) -> ChatMessage:
         msg = ChatMessage(
             session_id=session_id,
             role=role,
             content=content,
             tool_calls_json=tool_calls_json,
+            token_usage_json=token_usage_json,
         )
         self.session.add(msg)
         await self.session.flush()

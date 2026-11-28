@@ -23,6 +23,7 @@ export interface RecommendedProduct {
 export interface ChatRequestPayload {
   message: string;
   session_id?: string | null;
+  guest_token?: string | null;
   current_route?: string | null;
   product_id?: string | null;
   image_base64?: string | null;
@@ -31,6 +32,7 @@ export interface ChatRequestPayload {
 
 export interface ChatResponse {
   session_id: string;
+  guest_token?: string | null;
   reply: string;
   tools_used: string[];
   recommended_products: RecommendedProduct[];
@@ -59,6 +61,7 @@ export type ChatStreamEvent =
   | {
       type: 'done';
       session_id: string;
+      guest_token?: string | null;
       tools_used: string[];
       recommended_products: RecommendedProduct[];
       suggestions: string[];
@@ -170,6 +173,7 @@ export class ChatbotService {
                   observer.next({
                     type: 'done',
                     session_id: parsed.session_id,
+                    guest_token: parsed.guest_token || null,
                     tools_used: parsed.tools_used || [],
                     recommended_products: parsed.recommended_products || [],
                     suggestions: parsed.suggestions || []

@@ -81,6 +81,7 @@ export class ChatWidgetComponent implements OnDestroy {
   isLoadingHistory = signal(false);
 
   sessionId = signal<string | null>(null);
+  guestToken = signal<string | null>(null);
   sessions = signal<ChatSessionItem[]>([]);
   currentRoute = signal<string>('/');
   inputText = '';
@@ -331,6 +332,7 @@ export class ChatWidgetComponent implements OnDestroy {
   resetConversation(): void {
     this.activeStreamSub?.unsubscribe();
     this.sessionId.set(null);
+    this.guestToken.set(null);
     this.showHistory.set(false);
     this.clearPendingImage();
     this.messages.set([
@@ -430,6 +432,7 @@ export class ChatWidgetComponent implements OnDestroy {
       .sendMessageStream({
         message: question,
         session_id: this.sessionId(),
+        guest_token: this.guestToken(),
         current_route: this.currentRoute(),
         image_base64: imgB64,
         image_mime_type: imgMime
@@ -464,6 +467,9 @@ export class ChatWidgetComponent implements OnDestroy {
           }
           if (evt.type === 'done') {
             this.sessionId.set(evt.session_id);
+            if (evt.guest_token) {
+              this.guestToken.set(evt.guest_token);
+            }
             if (assistantIndex !== -1) {
               this.messages.update(list =>
                 list.map((m, i) =>

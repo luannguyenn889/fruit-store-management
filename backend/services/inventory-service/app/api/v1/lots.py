@@ -43,6 +43,30 @@ async def get_stock_summary(
 
 
 @router.get(
+    "/stock/public",
+    tags=["Stock Summary"],
+    summary="Tra cứu tồn khả dụng công khai (chỉ trả product_id, sku, product_name, available_quantity)",
+)
+async def get_public_stock_summary(
+    product_id: Optional[UUID] = Query(default=None),
+    session: AsyncSession = Depends(get_db),
+) -> dict:
+    service = LotService(session)
+    summary = await service.get_stock_summary(product_id=product_id)
+    return {
+        "products": [
+            {
+                "product_id": str(item.product_id),
+                "sku": item.sku,
+                "product_name": item.product_name,
+                "available_quantity": str(item.available_quantity),
+            }
+            for item in summary.products
+        ]
+    }
+
+
+@router.get(
     "/lots/expiring",
     response_model=ExpiringLotsResponse,
     tags=["Lots"],
