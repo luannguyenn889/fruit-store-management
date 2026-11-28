@@ -65,7 +65,7 @@ _MODEL_COOLDOWN_UNTIL: Dict[str, float] = {}
 def _default_client_factory(api_key: str) -> genai.Client:
     cached = _CLIENT_CACHE.get(api_key)
     if cached is None:
-        cached = genai.Client(api_key=api_key)
+        cached = genai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
         _CLIENT_CACHE[api_key] = cached
     return cached
 
