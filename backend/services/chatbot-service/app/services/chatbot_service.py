@@ -91,11 +91,19 @@ def _model_candidates() -> List[str]:
 
 def _is_retryable_model_error(exc: Exception) -> bool:
     msg = str(exc)
+    err_type = type(exc).__name__
     return (
-        "429" in msg
+        "ServerError" in err_type
+        or "429" in msg
         or "RESOURCE_EXHAUSTED" in msg
         or "404" in msg
         or "NOT_FOUND" in msg
+        or "500" in msg
+        or "502" in msg
+        or "503" in msg
+        or "504" in msg
+        or "UNAVAILABLE" in msg
+        or "INTERNAL" in msg
     )
 
 
