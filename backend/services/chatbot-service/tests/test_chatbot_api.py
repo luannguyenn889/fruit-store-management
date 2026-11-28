@@ -268,3 +268,9 @@ async def test_vision_rejects_invalid_mime_type(client: AsyncClient) -> None:
     assert resp.status_code == 422
     assert resp.json()["code"] == "INVALID_IMAGE_MIME"
 
+
+def test_system_instruction_enforces_scope_and_security_guardrails() -> None:
+    assert "TỪ CHỐI NGOÀI PHẠM VI" in chatbot_service.SYSTEM_INSTRUCTION
+    assert "TRUNG THỰC DỮ LIỆU" in chatbot_service.SYSTEM_INSTRUCTION
+    assert "BẢO MẬT" in chatbot_service.SYSTEM_INSTRUCTION
+
